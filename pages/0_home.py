@@ -5,6 +5,7 @@ from __future__ import annotations
 import plotly.graph_objects as go
 import streamlit as st
 
+from src import reference
 from src.data_loader import kpi_snapshot
 from src.utils.styling import BLUE, GOLD, NAVY, TEAL, fmt_money, nav_card, page_header
 from src.viz.charts import apply_theme
@@ -40,6 +41,25 @@ st.divider()
 # ---------------------------------------------------------------------------
 # As três camadas
 # ---------------------------------------------------------------------------
+st.subheader("Por que isso importa agora")
+st.markdown(
+    "A atribuição tradicional (last-click / MTA puro) está estruturalmente quebrada no ambiente de "
+    "privacidade atual — iOS 14.5+, cookieless, LGPD/GDPR e walled gardens. O resultado prático é "
+    "**overspend em resposta direta** e **underinvestment em topo de funil**."
+)
+stat_cols = st.columns(len(reference.EXECUTIVE_STATS))
+for col, (number, headline, detail) in zip(stat_cols, reference.EXECUTIVE_STATS):
+    with col:
+        st.markdown(
+            f"<div class='mmm-card' style='border-top-color:{NAVY}'>"
+            f"<span style='font-size:2rem;font-weight:800;color:{GOLD}'>{number}</span>"
+            f"<p style='margin-top:6px'><b>{headline}</b><br>{detail}</p></div>",
+            unsafe_allow_html=True,
+        )
+st.caption("Fonte: sumário executivo do framework de referência.")
+
+st.divider()
+
 st.subheader("As três camadas de medição")
 col_a, col_b, col_c = st.columns(3)
 with col_a:
@@ -145,6 +165,76 @@ for i in range(0, len(GUIDE), 2):
         with col:
             nav_card(title, desc)
     st.write("")
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# Matriz de decisão do framework (slide 07 do PPT de referência)
+# ---------------------------------------------------------------------------
+st.subheader("Matriz de decisão — qual técnica usar em cada cenário")
+st.caption(
+    "Reproduzida do slide *07 · Matriz de Decisão* do framework de referência, com a coluna extra "
+    "apontando onde cada cenário é exercitado neste app."
+)
+st.dataframe(
+    reference.DECISION_MATRIX, width="stretch", hide_index=True,
+    column_config={
+        "Cenário de negócio": st.column_config.TextColumn(width="medium"),
+        "Por quê": st.column_config.TextColumn(width="medium"),
+        "Página do app": st.column_config.TextColumn(width="small"),
+    },
+)
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# As 7 etapas do Roadmap de Testes A/B
+# ---------------------------------------------------------------------------
+st.subheader("As 7 etapas do Roadmap de Testes A/B")
+st.caption(
+    "O funil de experimentação do framework. Cada registro salvo no Learning Repository carrega "
+    "a etapa em que está — é o que o gráfico de funil da página de Governança mostra."
+)
+stage_cols = st.columns(len(reference.ROADMAP_STAGES))
+for col, (stage, what, source) in zip(stage_cols, reference.ROADMAP_STAGES):
+    with col:
+        st.markdown(
+            f"<div class='mmm-card' style='border-top-color:{GOLD}'><h4>{stage}</h4>"
+            f"<p><b>{what}</b><br><br>{source}</p></div>",
+            unsafe_allow_html=True,
+        )
+
+st.divider()
+
+# ---------------------------------------------------------------------------
+# Documento de referência
+# ---------------------------------------------------------------------------
+slides = reference.load_slides()
+if not slides.empty:
+    with st.expander(f"📄 Documento de referência do framework ({len(slides)} slides)"):
+        st.caption(
+            "Lido diretamente de `reference/Framework_MMM_x_MTA_Digital_Analytics.pptx` com "
+            "`python-pptx`. É a fonte da linguagem, da ordem das camadas e das calculadoras deste app."
+        )
+        query = st.text_input("Buscar no documento", placeholder="ex.: geo-experiment, adstock, SPRT")
+        found = reference.search_slides(query)
+        if query and found.empty:
+            st.info("Nenhum slide contém esse termo.")
+        else:
+            if query:
+                st.caption(f"{len(found)} slide(s) encontrado(s).")
+            options = {f"{r.slide:02d} · {r.titulo}": r.slide for r in found.itertuples()}
+            if options:
+                choice = st.selectbox("Slide", list(options), key="ref_slide")
+                row = slides[slides["slide"] == options[choice]].iloc[0]
+                if row["secao"]:
+                    st.caption(row["secao"])
+                st.text(row["texto"])
+else:
+    st.caption(
+        "ℹ️ Nenhum `.pptx` encontrado em `reference/` — coloque o documento do framework lá para "
+        "navegá-lo aqui dentro do app."
+    )
 
 st.divider()
 st.caption(

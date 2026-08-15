@@ -130,9 +130,26 @@ ativos, e a página sugere a correção (forma Log-Log, mais controles, alpha ma
 
 ---
 
-## Sobre o documento de referência
+## Documento de referência
 
-O PPT `Framework_MMM_x_MTA_Digital_Analytics.pptx` não estava presente na pasta do projeto quando o
-app foi construído. A linguagem, a ordem das camadas e a estrutura das calculadoras foram derivadas
-da especificação em `MD_CODE_MMM_MTA_AB.md`. Se o PPT for adicionado em `reference/`, ele pode ser
-lido na Home com `python-pptx` (já listado no `requirements.txt`).
+`reference/Framework_MMM_x_MTA_Digital_Analytics.pptx` (35 slides) é a fonte da linguagem, da ordem
+das camadas e da estrutura das calculadoras. O app o lê em tempo de execução com `python-pptx`
+(`src/reference.py`): a Home traz um navegador com busca textual em todos os slides, os números do
+sumário executivo, a **matriz de decisão** do slide 07 e as **7 etapas do Roadmap de Testes A/B**
+do slide 20.2 — as mesmas etapas usadas no funil do Learning Repository.
+
+Correspondência direta entre o documento e o app:
+
+| Slide do framework | Onde vive no app |
+|---|---|
+| 03 · MMM, incl. mídia digital (Google/Meta Ads) | MMM Modelagem — canais digitais no modelo, com nota de que a otimização tática é do MTA |
+| 06 · Modelos de atribuição do GA4 | MTA Atribuição — os 5 heurísticos, com a distorção do last-click explícita |
+| 06 · Data-Driven Attribution (Shapley/regressão) | MTA Markov e Shapley — o "DDA caseiro" |
+| 07 · Matriz de decisão | Home — tabela com a página correspondente a cada cenário |
+| 20.2 · As 7 etapas do Roadmap | Learning Repository — campo `etapa` e funil do framework |
+| 20.3 · Geo-experiments / holdout (DiD) | Geo-Holdout × MMM |
+| 20.5 · Ferramentas e métodos por tipo de teste | Simulador A/B — Z-test, Beta-Binomial e SPRT |
+| 20.6 · Loop de governança | Home (diagrama) e Learning Repository |
+
+Se o `.pptx` for removido de `reference/`, o app continua funcionando: o bloco de navegação do
+documento simplesmente não aparece.

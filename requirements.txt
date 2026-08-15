@@ -5,7 +5,7 @@ scikit-learn
 scipy
 statsmodels
 plotly
-python-pptx
+python-pptx        # leitura do PPT de referência na Home
 # Opcionais (modo Bayesiano do MMM). O app funciona sem eles.
 # pymc
 # arviz

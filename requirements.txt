@@ -1,0 +1,14 @@
+streamlit>=1.38
+pandas
+numpy
+scikit-learn
+scipy
+statsmodels
+plotly
+python-pptx
+# Opcionais (modo Bayesiano do MMM). O app funciona sem eles.
+# pymc
+# arviz
+# Opcionais (Página 10 — MTA Preditivo). O app degrada graciosamente sem eles.
+# xgboost
+# shap

@@ -26,8 +26,8 @@ from src.mta.propensity_model import (
     train_model,
 )
 from src.utils import repository
-from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, highlight, page_header
-from src.viz.charts import DIVERGING, SEQUENTIAL, apply_theme
+from src.utils.styling import GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, highlight, page_header, tokens
+from src.viz.charts import apply_theme, diverging, sequential
 
 page_header(
     "MTA Preditivo — Propensão à Conversão",
@@ -109,7 +109,7 @@ with tab_perf:
     c1, c2 = st.columns([2, 3])
     with c1:
         cm = confusion(result)
-        fig = px.imshow(cm, text_auto=True, color_continuous_scale=SEQUENTIAL,
+        fig = px.imshow(cm, text_auto=True, color_continuous_scale=sequential(),
                         title="Matriz de confusão (conjunto de teste)")
         st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
         st.caption(f"Limiar de decisão: {result.threshold:.2f}. "
@@ -123,7 +123,7 @@ with tab_perf:
         fig.add_scatter(x=fpr, y=tpr, mode="lines", name=f"ROC (AUC={m['roc_auc']:.3f})",
                         line=dict(color=TEAL, width=3))
         fig.add_scatter(x=[0, 1], y=[0, 1], mode="lines", name="Aleatório",
-                        line=dict(color=BORDER, dash="dash"))
+                        line=dict(color=tokens().border, dash="dash"))
         fig.add_scatter(x=recall, y=precision, mode="lines",
                         name=f"Precision-Recall (AUC={m['pr_auc']:.3f})",
                         line=dict(color=GOLD, width=3))
@@ -166,7 +166,7 @@ with tab_imp:
         directional = explanation["summary"].head(15).copy()
         fig = px.bar(directional.sort_values("efeito_medio"), x="efeito_medio", y="feature",
                      orientation="h", color="efeito_medio",
-                     color_continuous_scale=DIVERGING,
+                     color_continuous_scale=diverging(),
                      title="Features que empurram a probabilidade para cima (→) e para baixo (←)")
         st.plotly_chart(apply_theme(fig, height=480, legend_bottom=False), width="stretch")
 

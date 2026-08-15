@@ -7,7 +7,7 @@ import streamlit as st
 
 from src import reference
 from src.data_loader import kpi_snapshot
-from src.utils.styling import BLUE, GOLD, NAVY, TEAL, TEXT_MUTED, fmt_money, nav_card, page_header
+from src.utils.styling import BLUE, GOLD, NAVY, TEAL, fmt_money, nav_card, page_header, tokens
 from src.viz.charts import apply_theme
 
 page_header(
@@ -111,7 +111,7 @@ def loop_diagram() -> go.Figure:
             fillcolor=color, line=dict(color=color), opacity=0.95, layer="below",
         )
         fig.add_annotation(x=x, y=y, text=f"<b>{label}</b>", showarrow=False,
-                           font=dict(color="#0F1428", size=13))
+                           font=dict(color="#FFFFFF", size=13))
 
     arrows = [(0.5, 0.75, 0.85, 0.60), (0.88, 0.38, 0.60, 0.16),
               (0.38, 0.10, 0.14, 0.38), (0.13, 0.62, 0.40, 0.84)]
@@ -129,7 +129,7 @@ def loop_diagram() -> go.Figure:
     ]
     for x, y, text in labels:
         fig.add_annotation(x=x, y=y, text=text, showarrow=False,
-                           font=dict(size=11, color=TEXT_MUTED))
+                           font=dict(size=11, color=tokens().text_muted))
 
     fig.update_xaxes(visible=False, range=[0, 1])
     fig.update_yaxes(visible=False, range=[0, 1])

@@ -28,9 +28,10 @@ from src.mmm.model import (
     response_curve,
 )
 from src.mmm.transforms import FUNCTIONAL_FORMS, default_hill_params, hill_saturation
+from src.insights import mmm_recommendation
 from src.utils import repository
-from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, fmt_money, page_header
-from src.viz.charts import DIVERGING, apply_theme, stacked_area
+from src.utils.styling import GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, fmt_money, page_header, recommendation_panel, tokens
+from src.viz.charts import apply_theme, diverging, stacked_area
 
 page_header(
     "MMM Modelagem — o motor estatístico",
@@ -150,6 +151,79 @@ c2.metric("R² ajustado", f"{m['r2_ajustado_treino']:.3f}")
 c3.metric("MAPE (holdout)", f"{m['mape_holdout']:.1f}%", f"{int(m['holdout_weeks'])} semanas")
 c4.metric("MAE (holdout)", fmt_money(m["mae_holdout"], ""))
 
+# ---------------------------------------------------------------------------
+# Recomendação acionável
+# ---------------------------------------------------------------------------
+with st.spinner("Lendo as curvas de resposta para montar a recomendação..."):
+    try:
+        rec = mmm_recommendation(result)
+    except Exception as exc:
+        rec = {"ok": False, "message": str(exc)}
+
+if rec["ok"]:
+    recommendation_panel(
+        rec["headline"],
+        rec["detail"] + ".",
+        rec["invest"],
+        rec["watch"],
+        invest_note=(
+            f"Retorno marginal de <b>{rec['invest_marginal']:.2f}</b> em venda por R$ investido — "
+            f"o maior do mix. Sugestão: <b>+{fmt_money(rec['amount'])}</b> neste canal."
+        ),
+        watch_note=(
+            f"Retorno marginal de <b>{rec['watch_marginal']:.2f}</b> — o menor do mix. "
+            f"Sugestão: <b>economizar {fmt_money(rec['amount'])}</b> aqui "
+            f"({rec['fraction'] * 100:.0f}% do investimento atual do canal)."
+        ),
+    )
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Valor a realocar", fmt_money(rec["amount"]))
+    c2.metric("Vendas incrementais estimadas", fmt_money(rec["delta_sales"], ""),
+              f"{rec['lift_pct']:+.2f}%")
+    c3.metric("Custo do movimento", fmt_money(0.0),
+              help="O orçamento total não muda — é realocação, não investimento adicional.")
+
+    with st.expander("Ver o plano e o retorno marginal de cada canal"):
+        plan = rec["plan"].copy()
+        st.dataframe(
+            plan, width="stretch", hide_index=True,
+            column_config={
+                "valor": st.column_config.NumberColumn("Valor", format="%.0f"),
+                "investimento_atual": st.column_config.NumberColumn("Investimento atual", format="%.0f"),
+                "investimento_sugerido": st.column_config.NumberColumn("Sugerido", format="%.0f"),
+                "retorno_marginal": st.column_config.NumberColumn("Retorno marginal", format="%.2f"),
+                "por_que": st.column_config.TextColumn("Por quê", width="large"),
+            },
+        )
+        ranking = rec["table"][["canal_label", "investimento", "roi_medio", "retorno_marginal", "saturacao"]]
+        st.dataframe(
+            ranking, width="stretch", hide_index=True,
+            column_config={
+                "canal_label": "Canal",
+                "investimento": st.column_config.NumberColumn("Investimento", format="%.0f"),
+                "roi_medio": st.column_config.NumberColumn("ROI médio", format="%.2f"),
+                "retorno_marginal": st.column_config.NumberColumn("Retorno marginal (nível atual)", format="%.2f"),
+                "saturacao": st.column_config.ProgressColumn("Saturação ao dobrar", min_value=0.0,
+                                                             max_value=1.0, format="%.0f%%"),
+            },
+        )
+        st.caption(
+            "A ordenação é pelo **retorno marginal**, não pelo ROI médio: o ROI médio dilui a saturação "
+            "e faz um canal já esgotado parecer boa aposta. Para a realocação ótima entre TODOS os "
+            "canais de uma vez, com restrições por canal, use a página **💰 Otimizador de Budget**."
+        )
+        if rec["saturated"]:
+            st.warning(
+                "Canais que perdem mais de 60% do retorno ao dobrar o investimento (já saturando): "
+                + ", ".join(rec["saturated"]) + ".",
+                icon="📉",
+            )
+else:
+    st.info(f"Recomendação indisponível: {rec.get('message', 'dados insuficientes')}.")
+
+st.divider()
+
 tab_fit, tab_coef, tab_decomp, tab_curves, tab_dueto = st.tabs(
     ["📉 Ajuste", "🔢 Coeficientes e VIF", "🧱 Decomposição", "📐 Curvas de resposta", "🔄 Due-to"]
 )
@@ -205,7 +279,7 @@ with tab_coef:
 
     fig = px.bar(coefs.sort_values("coeficiente"), x="coeficiente", y="variavel",
                  orientation="h", title="Coeficientes padronizados",
-                 color="coeficiente", color_continuous_scale=DIVERGING)
+                 color="coeficiente", color_continuous_scale=diverging())
     st.plotly_chart(apply_theme(fig, height=460, legend_bottom=False), width="stretch")
     st.dataframe(coefs.round(4), width="stretch", hide_index=True)
 
@@ -324,7 +398,7 @@ with tab_dueto:
             lambda c: label(c) if c != "Base" else "Base")
         fig = go.Figure(go.Waterfall(
             x=dueto_display["driver"], y=dueto_display["delta"], orientation="v",
-            connector=dict(line=dict(color=BORDER)),
+            connector=dict(line=dict(color=tokens().border)),
             increasing=dict(marker=dict(color=POSITIVE)),
             decreasing=dict(marker=dict(color=NEGATIVE)),
         ))

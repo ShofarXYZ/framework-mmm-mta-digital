@@ -8,8 +8,9 @@ import streamlit as st
 
 from src.data_loader import label
 from src.mmm.optimizer import current_allocation, optimize_budget, what_if
+from src.insights import optimizer_recommendation
 from src.utils import repository
-from src.utils.styling import GOLD, NEGATIVE, fmt_money, highlight, page_header
+from src.utils.styling import GOLD, NEGATIVE, fmt_money, highlight, page_header, recommendation_panel
 from src.viz.charts import apply_theme, waterfall_compare
 
 page_header(
@@ -115,6 +116,56 @@ with tab_opt:
                 "share_otimo_%": st.column_config.NumberColumn("Share ótimo", format="%.1f%%"),
             },
         )
+
+        # --- Recomendação: onde colocar e onde economizar, em valores ---
+        plan = optimizer_recommendation(opt)
+        if plan["ok"] and plan["invest"] and plan["watch"]:
+            recommendation_panel(
+                f"Com base nestes dados, o melhor cenário é **investir em {plan['invest']}** "
+                f"e **atenção com {plan['watch']}**.",
+                f"A realocação move {fmt_money(plan['total_realocado'])} entre canais, sem "
+                f"aumentar o orçamento total, e rende {plan['lift_pct']:+.2f}% em vendas.",
+                plan["invest"], plan["watch"],
+                invest_note=(
+                    f"Colocar <b>+{fmt_money(plan['invest_amount'])}</b> aqui — é o canal que mais "
+                    "absorve investimento adicional antes de saturar."
+                ),
+                watch_note=(
+                    f"Economizar <b>{fmt_money(plan['watch_amount'])}</b> aqui — o retorno por real "
+                    "investido já não compensa frente às demais opções."
+                ),
+            )
+
+            col_g, col_c = st.columns(2)
+            with col_g:
+                st.markdown("**➕ Onde colocar mais budget**")
+                st.dataframe(
+                    plan["gains"], width="stretch", hide_index=True,
+                    column_config={
+                        "canal_label": "Canal",
+                        "alocacao_atual": st.column_config.NumberColumn("Atual", format="%.0f"),
+                        "alocacao_otima": st.column_config.NumberColumn("Sugerido", format="%.0f"),
+                        "delta": st.column_config.NumberColumn("Adicionar", format="+%.0f"),
+                        "delta_%": st.column_config.NumberColumn("Δ %", format="%.1f%%"),
+                    },
+                )
+            with col_c:
+                st.markdown("**➖ Onde economizar**")
+                st.dataframe(
+                    plan["cuts"], width="stretch", hide_index=True,
+                    column_config={
+                        "canal_label": "Canal",
+                        "alocacao_atual": st.column_config.NumberColumn("Atual", format="%.0f"),
+                        "alocacao_otima": st.column_config.NumberColumn("Sugerido", format="%.0f"),
+                        "delta": st.column_config.NumberColumn("Economizar", format="%.0f"),
+                        "delta_%": st.column_config.NumberColumn("Δ %", format="%.1f%%"),
+                    },
+                )
+            st.caption(
+                "Total realocado: **" + fmt_money(plan["total_realocado"]) + "** — o mesmo valor sai "
+                "dos canais da direita e entra nos da esquerda. O orçamento total não muda."
+            )
+            st.divider()
 
         movers = display.reindex(display["delta"].abs().sort_values(ascending=False).index)
         top_up = movers[movers["delta"] > 0].head(1)

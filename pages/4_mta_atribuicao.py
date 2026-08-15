@@ -10,9 +10,10 @@ import streamlit as st
 from src.data_loader import campaign_channel_summary, load_digital
 from src.mta.heuristics import HEURISTIC_MODELS, attribute_all, cpa_table, to_share
 from src.mta.journey_sim import adspend_by_channel, build_journeys, journey_stats, top_paths
+from src.insights import mta_recommendation
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, PALETTE, TEAL, page_header
-from src.viz.charts import SEQUENTIAL, apply_theme, grouped_bar
+from src.utils.styling import GOLD, NAVY, PALETTE, TEAL, fmt_money, page_header, recommendation_panel
+from src.viz.charts import apply_theme, grouped_bar, sequential
 
 page_header(
     "MTA — Modelos de Atribuição",
@@ -89,6 +90,46 @@ table = attribute_all(journeys, half_life)
 shares = to_share(table)
 adspend = adspend_by_channel(journeys)
 
+# ---------------------------------------------------------------------------
+# Recomendação acionável
+# ---------------------------------------------------------------------------
+rec = mta_recommendation(shares, adspend)
+if rec["ok"]:
+    recommendation_panel(
+        rec["headline"], rec["detail"], rec["invest"], rec["watch"],
+        invest_note=(
+            f"Subvalorizado em <b>{rec['gap_invest_pp']:.1f} p.p.</b> pelo last-click. "
+            + (f"Seguindo o crédito justo, o budget deste canal subiria "
+               f"<b>{fmt_money(abs(rec['amount']))}</b>." if rec['amount'] == rec['amount'] else "")
+        ),
+        watch_note=(
+            f"Supervalorizado em <b>{rec['gap_watch_pp']:.1f} p.p.</b> pelo last-click. "
+            + (f"Seguindo o crédito justo, daria para <b>economizar {fmt_money(rec['save'])}</b> aqui."
+               if rec['save'] == rec['save'] else "")
+        ),
+    )
+    with st.expander("Ver o cálculo: crédito por modelo e realocação de budget sugerida"):
+        st.dataframe(
+            rec["table"], width="stretch", hide_index=True,
+            column_config={
+                "canal": "Canal",
+                "credito_last_click_%": st.column_config.NumberColumn("Crédito last-click", format="%.1f%%"),
+                "credito_justo_%": st.column_config.NumberColumn("Crédito justo", format="%.1f%%"),
+                "gap_pp": st.column_config.NumberColumn("Gap (p.p.)", format="%+.1f"),
+                "investimento": st.column_config.NumberColumn("AdSpend atual", format="%.0f"),
+                "budget_pelo_last_click": st.column_config.NumberColumn("Budget pelo last-click", format="%.0f"),
+                "budget_pelo_credito_justo": st.column_config.NumberColumn("Budget pelo crédito justo", format="%.0f"),
+                "realocar": st.column_config.NumberColumn("Realocar", format="%+.0f"),
+            },
+        )
+        st.caption(
+            "Crédito justo = média de " + " e ".join(rec["reference_models"]) + ". A coluna *Realocar* "
+            "mostra quanto do investimento total mudaria de canal se o budget seguisse a jornada "
+            "inteira em vez do último clique. É uma referência de direção, não uma ordem de compra: "
+            "confirme com o teste de incrementalidade antes de executar."
+        )
+    st.divider()
+
 tab_compare, tab_table, tab_paths, tab_cross = st.tabs(
     ["📊 Comparação de modelos", "📋 Tabela e CPA", "🛤️ Caminhos", "🔎 Validação cruzada"]
 )
@@ -116,7 +157,7 @@ with tab_compare:
     c1, c2 = st.columns(2)
     with c1:
         fig = px.imshow(shares.round(1), text_auto=True, aspect="auto",
-                        color_continuous_scale=SEQUENTIAL, title="Heatmap: canal × modelo (% de crédito)")
+                        color_continuous_scale=sequential(), title="Heatmap: canal × modelo (% de crédito)")
         st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
     with c2:
         fig = px.line_polar(
@@ -154,7 +195,7 @@ with tab_paths:
     st.subheader("Caminhos mais frequentes")
     paths = top_paths(journeys, 15)
     fig = px.bar(paths.sort_values("clientes"), x="clientes", y="path_str", orientation="h",
-                 color="taxa_conversao", color_continuous_scale=SEQUENTIAL,
+                 color="taxa_conversao", color_continuous_scale=sequential(),
                  title="Top caminhos e sua taxa de conversão", labels={"path_str": "jornada"})
     st.plotly_chart(apply_theme(fig, height=520, legend_bottom=False), width="stretch")
 

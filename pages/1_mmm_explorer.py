@@ -21,7 +21,7 @@ from src.data_loader import (
     missing_report,
 )
 from src.utils.styling import GOLD, NAVY, TEAL, page_header
-from src.viz.charts import SEQUENTIAL, apply_theme, bar_chart, heatmap
+from src.viz.charts import apply_theme, bar_chart, heatmap, sequential
 
 page_header(
     "MMM Explorer — Exploração e Data Quality",
@@ -66,7 +66,7 @@ with tab_dq:
     with st.expander("Mapa de ausência ao longo do tempo"):
         mask = raw[MEDIA_CHANNELS + ["sales"]].isna().astype(int).T
         mask.columns = raw["date"].dt.strftime("%Y-%m-%d")
-        fig = px.imshow(mask, aspect="auto", color_continuous_scale=SEQUENTIAL,
+        fig = px.imshow(mask, aspect="auto", color_continuous_scale=sequential(),
                         title="1 = valor ausente")
         st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
 

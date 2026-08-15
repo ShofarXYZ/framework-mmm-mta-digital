@@ -1,10 +1,27 @@
+# O app suporta os DOIS temas. O usuário escolhe em
+# ☰ (canto superior direito) → Settings → Appearance → Light / Dark / System.
+# `base` define apenas o padrão de quem abre o app pela primeira vez.
 [theme]
 base = "dark"
-primaryColor = "#E8A33D"
+primaryColor = "#D9922F"
+font = "sans serif"
+baseRadius = "0.6rem"
+
+[theme.dark]
 backgroundColor = "#0F1428"
 secondaryBackgroundColor = "#1A2145"
 textColor = "#E6EAF3"
-font = "sans serif"
+borderColor = "#2E3766"
+linkColor = "#38B2C4"
+codeBackgroundColor = "#1A2145"
+
+[theme.light]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F4FA"
+textColor = "#1B2440"
+borderColor = "#D8DFEC"
+linkColor = "#1C7293"
+codeBackgroundColor = "#F1F4FA"
 
 [server]
 headless = true

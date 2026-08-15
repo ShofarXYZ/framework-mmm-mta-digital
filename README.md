@@ -52,6 +52,44 @@ pages/                     as 11 páginas
 
 ---
 
+## Tema claro e escuro
+
+O app suporta os dois. A troca é pelo controle nativo do Streamlit —
+**☰ (canto superior direito) → Settings → Appearance → Light / Dark / System** — e a barra lateral
+mostra qual está ativo. `base = "dark"` no `config.toml` define apenas o padrão de quem abre pela
+primeira vez.
+
+As duas paletas ficam em `[theme.light]` e `[theme.dark]` no `.streamlit/config.toml`. O CSS custom
+e os gráficos Plotly leem `st.context.theme.type` em tempo de render (`styling.tokens()`), então
+acompanham a escolha sem recarregar a página. As **cores de marca** (navy, teal, azul, dourado) são
+as mesmas nos dois temas, em tons médios legíveis sobre branco e sobre o fundo escuro; só as
+superfícies e o texto mudam.
+
+---
+
+## Recomendação acionável
+
+As telas de MMM e MTA não param no diagnóstico: cada uma abre com um painel
+**"com base nestes dados, o melhor cenário é investir em X e atenção com Y"**, com o valor a
+realocar e o impacto estimado. A lógica está em `src/insights.py`, e as regras são explícitas:
+
+| Tela | Critério de "investir" | Critério de "atenção" | O que informa |
+|---|---|---|---|
+| 🧪 MMM Modelagem | maior **retorno marginal** no nível atual de investimento, lido da curva de resposta | menor retorno marginal (ou canal que já não responde) | quanto realocar e as vendas incrementais estimadas, medidas rodando o cenário no próprio modelo |
+| 💰 Otimizador de Budget | canal que mais recebe budget na solução do SLSQP | canal que mais perde | quanto colocar e quanto economizar, canal a canal, em valores |
+| 🔀 Modelos de Atribuição | canal mais **subvalorizado** pelo last-click | canal mais supervalorizado | quanto o budget mudaria se seguisse a jornada inteira em vez do último clique |
+| 🕸️ Markov e Shapley | idem, usando o crédito **algorítmico** como referência | idem | a leitura mais confiável da camada de MTA |
+
+Duas escolhas de método que importam:
+
+- O ranking do MMM usa **retorno marginal, não ROI médio**. O ROI médio dilui a saturação e faz um
+  canal já esgotado parecer boa aposta; o marginal responde "o *próximo* real rende quanto aqui?".
+- A realocação sugerida na página de modelagem é **conservadora por construção** (20% do
+  investimento do canal de atenção). Mover pouco, medir, e só então mover mais — a recomendação é
+  uma hipótese a validar no geo-holdout, não uma ordem de compra.
+
+---
+
 ## Página → conceito do framework
 
 | Página | Camada | O que faz | Dataset |

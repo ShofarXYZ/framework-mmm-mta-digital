@@ -17,7 +17,7 @@ st.set_page_config(
 
 from src.data_loader import segment_options  # noqa: E402
 from src.utils import repository  # noqa: E402
-from src.utils.styling import NAVY, inject_css  # noqa: E402
+from src.utils.styling import NAVY, inject_css, theme_hint  # noqa: E402
 
 inject_css()
 
@@ -76,6 +76,8 @@ with st.sidebar:
 
     st.metric("Learning Repository", f"{repository.count()} registros")
     st.divider()
+
+    theme_hint()
     st.caption(
         "Camadas: **Estratégico** (MMM, top-down) · **Tático** (MTA, bottom-up) · "
         "**Validação** (Testes A/B, causal) · **Governança** (Learning Repository)."

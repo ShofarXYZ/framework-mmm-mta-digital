@@ -7,7 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 from src.utils import repository
-from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, PALETTE, POSITIVE, TEAL, page_header
+from src.utils.styling import GOLD, NAVY, NEGATIVE, PALETTE, POSITIVE, TEAL, page_header, tokens
 from src.viz.charts import apply_theme, funnel
 
 page_header(
@@ -170,7 +170,7 @@ with tab_analysis:
                      orientation="h", color="origem", color_discrete_sequence=PALETTE,
                      hover_data=["canal_driver", "resultado"],
                      title="Lift registrado por experimento")
-        fig.add_vline(x=0, line_color=BORDER)
+        fig.add_vline(x=0, line_color=tokens().border)
         st.plotly_chart(apply_theme(fig, height=420), width="stretch")
 
     st.subheader("Próximos passos em aberto")

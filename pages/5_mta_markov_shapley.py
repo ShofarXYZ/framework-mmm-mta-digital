@@ -9,12 +9,13 @@ import streamlit as st
 
 from src.data_loader import load_digital
 from src.mta.heuristics import attribute_all, to_share
-from src.mta.journey_sim import build_journeys
+from src.mta.journey_sim import adspend_by_channel, build_journeys
 from src.mta.markov import build_transition_counts, markov_attribution, sankey_data, to_probabilities
 from src.mta.shapley import shapley_attribution
+from src.insights import mta_recommendation
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, TEAL, page_header
-from src.viz.charts import DIVERGING, SEQUENTIAL, apply_theme, grouped_bar, sankey
+from src.utils.styling import GOLD, NAVY, TEAL, fmt_money, page_header, recommendation_panel
+from src.viz.charts import apply_theme, diverging, grouped_bar, sankey, sequential
 
 page_header(
     "MTA — Markov Chain e Shapley Value",
@@ -72,7 +73,7 @@ with tab_markov:
     display = markov.reset_index()
     fig = px.bar(display.sort_values("removal_effect"), x="removal_effect", y="canal",
                  orientation="h", title="Removal Effect por canal",
-                 color="removal_effect", color_continuous_scale=SEQUENTIAL)
+                 color="removal_effect", color_continuous_scale=sequential())
     st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
 
     st.dataframe(
@@ -165,6 +166,26 @@ with tab_all:
         width="stretch",
     )
 
+    rec = mta_recommendation(full, adspend_by_channel(journeys))
+    if rec["ok"]:
+        recommendation_panel(
+            rec["headline"], rec["detail"], rec["invest"], rec["watch"],
+            invest_note=(
+                f"Markov e Shapley creditam <b>{rec['gap_invest_pp']:.1f} p.p. a mais</b> que o "
+                f"last-click. Seguindo o crédito algorítmico, o budget deste canal subiria "
+                f"<b>{fmt_money(abs(rec['amount']))}</b>."
+            ),
+            watch_note=(
+                f"O last-click credita <b>{rec['gap_watch_pp']:.1f} p.p. a mais</b> do que os modelos "
+                f"algorítmicos justificam. Potencial de <b>economia de {fmt_money(rec['save'])}</b>."
+            ),
+        )
+        st.caption(
+            "Esta é a leitura mais confiável da página de MTA: Markov considera a ordem dos "
+            "touchpoints e Shapley a presença do canal na jornada — nenhum dos dois usa regra fixa."
+        )
+        st.divider()
+
     spread = (full.max(axis=1) - full.min(axis=1)).sort_values(ascending=False)
     st.info(
         f"**Maior divergência entre modelos:** `{spread.index[0]}`, com {spread.iloc[0]:.1f} p.p. "
@@ -178,7 +199,7 @@ with tab_all:
     fig = px.bar(
         x=delta_lastclick.values, y=delta_lastclick.index, orientation="h",
         title="Quanto o last-click distorce em relação aos modelos algorítmicos (p.p.)",
-        color=delta_lastclick.values, color_continuous_scale=DIVERGING,
+        color=delta_lastclick.values, color_continuous_scale=diverging(),
         labels={"x": "Δ p.p. (last-click − média Markov/Shapley)", "y": "canal"},
     )
     st.plotly_chart(apply_theme(fig, height=360, legend_bottom=False), width="stretch")

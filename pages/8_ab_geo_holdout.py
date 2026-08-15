@@ -9,7 +9,7 @@ import streamlit as st
 from src.abtest.geo_holdout import did_table, run_geo_holdout
 from src.data_loader import label
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, TEAL, fmt_money, page_header
+from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, fmt_money, page_header
 from src.viz.charts import apply_theme
 
 page_header(
@@ -131,8 +131,8 @@ with tab_did:
             y=[res["real_post"] - res["real_pre"],
                -(res["base_post"] - res["base_pre"]),
                0],
-            increasing=dict(marker=dict(color=TEAL)),
-            decreasing=dict(marker=dict(color="#D62828")),
+            increasing=dict(marker=dict(color=POSITIVE)),
+            decreasing=dict(marker=dict(color=NEGATIVE)),
             totals=dict(marker=dict(color=GOLD)),
         ))
         fig.update_layout(title="Composição da diferença-em-diferenças")
@@ -158,7 +158,7 @@ with tab_compare:
                 marker_color=[TEAL, GOLD],
                 text=[f"{res['lift_previsto_mmm_%']:+.2f}%", f"{res['lift_medido_%']:+.2f}%"],
                 textposition="outside")
-    fig.add_hline(y=0, line_color="#CBD5E0")
+    fig.add_hline(y=0, line_color=BORDER)
     fig.update_layout(title="Modelo × experimento", yaxis_title="lift (%)")
     st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
 

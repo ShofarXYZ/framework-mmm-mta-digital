@@ -29,8 +29,8 @@ from src.mmm.model import (
 )
 from src.mmm.transforms import FUNCTIONAL_FORMS, default_hill_params, hill_saturation
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, TEAL, fmt_money, page_header
-from src.viz.charts import apply_theme, stacked_area
+from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, fmt_money, page_header
+from src.viz.charts import DIVERGING, apply_theme, stacked_area
 
 page_header(
     "MMM Modelagem — o motor estatístico",
@@ -205,7 +205,7 @@ with tab_coef:
 
     fig = px.bar(coefs.sort_values("coeficiente"), x="coeficiente", y="variavel",
                  orientation="h", title="Coeficientes padronizados",
-                 color="coeficiente", color_continuous_scale=["#D62828", "#EDF2F7", TEAL])
+                 color="coeficiente", color_continuous_scale=DIVERGING)
     st.plotly_chart(apply_theme(fig, height=460, legend_bottom=False), width="stretch")
     st.dataframe(coefs.round(4), width="stretch", hide_index=True)
 
@@ -226,8 +226,8 @@ with tab_coef:
                "Canais investidos sempre juntos inflam o VIF — é o caso clássico do MMM.")
     st.dataframe(
         vif.style.map(
-            lambda v: "background-color:#FDECEA" if isinstance(v, (int, float)) and v > 10
-            else ("background-color:#FEF6E7" if isinstance(v, (int, float)) and v > 5 else ""),
+            lambda v: "background-color:rgba(229,99,106,0.22)" if isinstance(v, (int, float)) and v > 10
+            else ("background-color:rgba(232,163,61,0.20)" if isinstance(v, (int, float)) and v > 5 else ""),
             subset=["VIF"],
         ).format({"VIF": "{:.2f}"}),
         width="stretch", hide_index=True,
@@ -324,9 +324,9 @@ with tab_dueto:
             lambda c: label(c) if c != "Base" else "Base")
         fig = go.Figure(go.Waterfall(
             x=dueto_display["driver"], y=dueto_display["delta"], orientation="v",
-            connector=dict(line=dict(color="#CBD5E0")),
-            increasing=dict(marker=dict(color=TEAL)),
-            decreasing=dict(marker=dict(color="#D62828")),
+            connector=dict(line=dict(color=BORDER)),
+            increasing=dict(marker=dict(color=POSITIVE)),
+            decreasing=dict(marker=dict(color=NEGATIVE)),
         ))
         fig.update_layout(title="Δ de contribuição por driver (período atual × anterior)")
         st.plotly_chart(apply_theme(fig, height=420, legend_bottom=False), width="stretch")

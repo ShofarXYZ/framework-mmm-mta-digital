@@ -14,7 +14,7 @@ from src.mta.markov import build_transition_counts, markov_attribution, sankey_d
 from src.mta.shapley import shapley_attribution
 from src.utils import repository
 from src.utils.styling import GOLD, NAVY, TEAL, page_header
-from src.viz.charts import apply_theme, grouped_bar, sankey
+from src.viz.charts import DIVERGING, SEQUENTIAL, apply_theme, grouped_bar, sankey
 
 page_header(
     "MTA — Markov Chain e Shapley Value",
@@ -72,7 +72,7 @@ with tab_markov:
     display = markov.reset_index()
     fig = px.bar(display.sort_values("removal_effect"), x="removal_effect", y="canal",
                  orientation="h", title="Removal Effect por canal",
-                 color="removal_effect", color_continuous_scale="Teal")
+                 color="removal_effect", color_continuous_scale=SEQUENTIAL)
     st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
 
     st.dataframe(
@@ -178,7 +178,7 @@ with tab_all:
     fig = px.bar(
         x=delta_lastclick.values, y=delta_lastclick.index, orientation="h",
         title="Quanto o last-click distorce em relação aos modelos algorítmicos (p.p.)",
-        color=delta_lastclick.values, color_continuous_scale=["#D62828", "#EDF2F7", TEAL],
+        color=delta_lastclick.values, color_continuous_scale=DIVERGING,
         labels={"x": "Δ p.p. (last-click − média Markov/Shapley)", "y": "canal"},
     )
     st.plotly_chart(apply_theme(fig, height=360, legend_bottom=False), width="stretch")

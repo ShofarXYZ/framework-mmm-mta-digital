@@ -26,8 +26,8 @@ from src.mta.propensity_model import (
     train_model,
 )
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, TEAL, page_header
-from src.viz.charts import apply_theme
+from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, highlight, page_header
+from src.viz.charts import DIVERGING, SEQUENTIAL, apply_theme
 
 page_header(
     "MTA Preditivo — Propensão à Conversão",
@@ -109,7 +109,7 @@ with tab_perf:
     c1, c2 = st.columns([2, 3])
     with c1:
         cm = confusion(result)
-        fig = px.imshow(cm, text_auto=True, color_continuous_scale="Blues",
+        fig = px.imshow(cm, text_auto=True, color_continuous_scale=SEQUENTIAL,
                         title="Matriz de confusão (conjunto de teste)")
         st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
         st.caption(f"Limiar de decisão: {result.threshold:.2f}. "
@@ -123,7 +123,7 @@ with tab_perf:
         fig.add_scatter(x=fpr, y=tpr, mode="lines", name=f"ROC (AUC={m['roc_auc']:.3f})",
                         line=dict(color=TEAL, width=3))
         fig.add_scatter(x=[0, 1], y=[0, 1], mode="lines", name="Aleatório",
-                        line=dict(color="#CBD5E0", dash="dash"))
+                        line=dict(color=BORDER, dash="dash"))
         fig.add_scatter(x=recall, y=precision, mode="lines",
                         name=f"Precision-Recall (AUC={m['pr_auc']:.3f})",
                         line=dict(color=GOLD, width=3))
@@ -138,7 +138,7 @@ with tab_perf:
     dist = pd.DataFrame({"probabilidade": result.y_proba,
                          "real": np.where(result.y_test == 1, "Converteu", "Não converteu")})
     fig = px.histogram(dist, x="probabilidade", color="real", nbins=40, barmode="overlay",
-                       opacity=0.75, color_discrete_map={"Converteu": TEAL, "Não converteu": "#D62828"},
+                       opacity=0.75, color_discrete_map={"Converteu": TEAL, "Não converteu": NEGATIVE},
                        title="Separação entre as classes")
     fig.add_vline(x=result.threshold, line_dash="dash", line_color=NAVY,
                   annotation_text="limiar")
@@ -166,7 +166,7 @@ with tab_imp:
         directional = explanation["summary"].head(15).copy()
         fig = px.bar(directional.sort_values("efeito_medio"), x="efeito_medio", y="feature",
                      orientation="h", color="efeito_medio",
-                     color_continuous_scale=["#D62828", "#EDF2F7", TEAL],
+                     color_continuous_scale=DIVERGING,
                      title="Features que empurram a probabilidade para cima (→) e para baixo (←)")
         st.plotly_chart(apply_theme(fig, height=480, legend_bottom=False), width="stretch")
 
@@ -230,14 +230,9 @@ with tab_score:
             c1, c2 = st.columns([1, 2])
             with c1:
                 band = "Alta" if proba >= 0.8 else ("Média" if proba >= 0.5 else "Baixa")
-                color = TEAL if proba >= 0.8 else (GOLD if proba >= 0.5 else "#D62828")
-                st.markdown(
-                    f"<div style='background:{color}22;border-left:6px solid {color};padding:20px;"
-                    f"border-radius:10px;text-align:center'>"
-                    f"<span style='font-size:3rem;font-weight:800;color:{NAVY}'>{proba * 100:.1f}%</span>"
-                    f"<br><span style='color:#4A5568'>propensão à conversão — faixa <b>{band}</b></span></div>",
-                    unsafe_allow_html=True,
-                )
+                color = POSITIVE if proba >= 0.8 else (GOLD if proba >= 0.5 else NEGATIVE)
+                highlight(f"{proba * 100:.1f}%",
+                          f"propensão à conversão — faixa <b>{band}</b>", color=color)
             with c2:
                 st.markdown("**Os 3 fatores que mais pesaram nesta decisão**")
                 drivers_display = drivers.copy()

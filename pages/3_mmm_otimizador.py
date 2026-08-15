@@ -9,7 +9,7 @@ import streamlit as st
 from src.data_loader import label
 from src.mmm.optimizer import current_allocation, optimize_budget, what_if
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, fmt_money, page_header
+from src.utils.styling import GOLD, NEGATIVE, fmt_money, highlight, page_header
 from src.viz.charts import apply_theme, waterfall_compare
 
 page_header(
@@ -87,12 +87,10 @@ with tab_opt:
         c2.metric("Vendas — alocação ótima", fmt_money(opt["optimal_sales"], ""))
         c3.metric("Lift esperado", f"{lift:+.2f}%")
 
-        st.markdown(
-            f"<div style='background:{GOLD}22;border-left:5px solid {GOLD};padding:16px 20px;"
-            f"border-radius:8px'><span style='font-size:2.4rem;font-weight:800;color:{NAVY}'>"
-            f"{lift:+.2f}%</span><br><span style='color:#4A5568'>de lift esperado em vendas "
-            "apenas realocando o mesmo orçamento entre canais.</span></div>",
-            unsafe_allow_html=True,
+        highlight(
+            f"{lift:+.2f}%",
+            "de lift esperado em vendas apenas realocando o mesmo orçamento entre canais.",
+            color=GOLD if lift >= 0 else NEGATIVE,
         )
         st.write("")
 

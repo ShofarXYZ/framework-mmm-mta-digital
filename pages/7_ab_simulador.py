@@ -12,7 +12,7 @@ from src.abtest.frequentist import observed_power, two_proportion_ztest
 from src.abtest.sequential import sprt_test, sprt_trajectory
 from src.data_loader import load_campaigns, load_digital
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, TEAL, page_header
+from src.utils.styling import GOLD, GREY, NAVY, NEGATIVE, POSITIVE, TEAL, highlight, page_header
 from src.viz.charts import apply_theme
 
 page_header(
@@ -23,21 +23,18 @@ page_header(
 )
 
 VERDICT_STYLE = {
-    "Winner": ("#1B7F3B", "#E7F6EC", "🏆"),
-    "Loser": ("#B3261E", "#FDECEA", "🔻"),
-    "Neutral": ("#8A6D1F", "#FEF6E7", "➖"),
+    "Winner": (POSITIVE, "🏆"),
+    "Loser": (NEGATIVE, "🔻"),
+    "Neutral": (GOLD, "➖"),
 }
 
 
 def verdict_banner(verdict: str, lift: float, p_value: float) -> None:
-    color, background, icon = VERDICT_STYLE[verdict]
-    st.markdown(
-        f"<div style='background:{background};border-left:6px solid {color};padding:18px 22px;"
-        f"border-radius:10px'><span style='font-size:2.1rem;font-weight:800;color:{color}'>"
-        f"{icon} {verdict.upper()}</span><br>"
-        f"<span style='color:#4A5568;font-size:1rem'>Lift de <b>{lift:+.2f}%</b> · "
-        f"p-value <b>{p_value:.4f}</b></span></div>",
-        unsafe_allow_html=True,
+    color, icon = VERDICT_STYLE[verdict]
+    highlight(
+        f"{icon} {verdict.upper()}",
+        f"Lift de <b>{lift:+.2f}%</b> · p-value <b>{p_value:.4f}</b>",
+        color=color,
     )
 
 
@@ -83,7 +80,7 @@ def render_results(conv_a: int, n_a: int, conv_b: int, n_b: int, name_a: str, na
         st.dataframe(significance_table(freq), width="stretch", hide_index=True)
 
         fig = go.Figure()
-        for level, color in ((0.99, "#CBD5E0"), (0.95, TEAL), (0.90, NAVY)):
+        for level, color in ((0.99, GREY), (0.95, TEAL), (0.90, NAVY)):
             info = freq["intervalos"][level]
             for i, (variant, name) in enumerate(((info["control"], name_a), (info["variation"], name_b))):
                 fig.add_trace(go.Scatter(
@@ -155,9 +152,9 @@ def render_results(conv_a: int, n_a: int, conv_b: int, n_b: int, name_a: str, na
         fig = go.Figure()
         fig.add_scatter(x=checkpoints, y=llr, mode="lines", name="LLR acumulado",
                         line=dict(color=TEAL, width=3))
-        fig.add_hline(y=sprt["limite_superior"], line_dash="dash", line_color="#1B7F3B",
+        fig.add_hline(y=sprt["limite_superior"], line_dash="dash", line_color=POSITIVE,
                       annotation_text="aceita H1 (há efeito)")
-        fig.add_hline(y=sprt["limite_inferior"], line_dash="dash", line_color="#B3261E",
+        fig.add_hline(y=sprt["limite_inferior"], line_dash="dash", line_color=NEGATIVE,
                       annotation_text="aceita H0 (sem efeito)")
         fig.update_layout(title="Trajetória do teste sequencial",
                           xaxis_title="visitantes acumulados na variação", yaxis_title="LLR")

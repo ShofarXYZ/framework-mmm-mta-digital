@@ -7,7 +7,7 @@ import streamlit as st
 
 from src import reference
 from src.data_loader import kpi_snapshot
-from src.utils.styling import BLUE, GOLD, NAVY, TEAL, fmt_money, nav_card, page_header
+from src.utils.styling import BLUE, GOLD, NAVY, TEAL, TEXT_MUTED, fmt_money, nav_card, page_header
 from src.viz.charts import apply_theme
 
 page_header(
@@ -111,7 +111,7 @@ def loop_diagram() -> go.Figure:
             fillcolor=color, line=dict(color=color), opacity=0.95, layer="below",
         )
         fig.add_annotation(x=x, y=y, text=f"<b>{label}</b>", showarrow=False,
-                           font=dict(color="#FFFFFF", size=13))
+                           font=dict(color="#0F1428", size=13))
 
     arrows = [(0.5, 0.75, 0.85, 0.60), (0.88, 0.38, 0.60, 0.16),
               (0.38, 0.10, 0.14, 0.38), (0.13, 0.62, 0.40, 0.84)]
@@ -129,7 +129,7 @@ def loop_diagram() -> go.Figure:
     ]
     for x, y, text in labels:
         fig.add_annotation(x=x, y=y, text=text, showarrow=False,
-                           font=dict(size=11, color="#64748B"))
+                           font=dict(size=11, color=TEXT_MUTED))
 
     fig.update_xaxes(visible=False, range=[0, 1])
     fig.update_yaxes(visible=False, range=[0, 1])
@@ -195,14 +195,19 @@ st.caption(
     "O funil de experimentação do framework. Cada registro salvo no Learning Repository carrega "
     "a etapa em que está — é o que o gráfico de funil da página de Governança mostra."
 )
-stage_cols = st.columns(len(reference.ROADMAP_STAGES))
-for col, (stage, what, source) in zip(stage_cols, reference.ROADMAP_STAGES):
-    with col:
-        st.markdown(
-            f"<div class='mmm-card' style='border-top-color:{GOLD}'><h4>{stage}</h4>"
-            f"<p><b>{what}</b><br><br>{source}</p></div>",
-            unsafe_allow_html=True,
-        )
+# 4 + 3 em vez de 7 colunas: com 7 os cards ficam estreitos demais para ler.
+for start, size in ((0, 4), (4, 3)):
+    row = reference.ROADMAP_STAGES[start : start + size]
+    cols = st.columns(4)
+    for col, (stage, what, source) in zip(cols, row):
+        with col:
+            st.markdown(
+                f"<div class='mmm-card' style='border-top-color:{GOLD}'>"
+                f"<h4>{start + row.index((stage, what, source)) + 1}. {stage}</h4>"
+                f"<p><b>{what}</b><br><br>{source}</p></div>",
+                unsafe_allow_html=True,
+            )
+    st.write("")
 
 st.divider()
 

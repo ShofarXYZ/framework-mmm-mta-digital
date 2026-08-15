@@ -12,7 +12,7 @@ from src.mta.heuristics import HEURISTIC_MODELS, attribute_all, cpa_table, to_sh
 from src.mta.journey_sim import adspend_by_channel, build_journeys, journey_stats, top_paths
 from src.utils import repository
 from src.utils.styling import GOLD, NAVY, PALETTE, TEAL, page_header
-from src.viz.charts import apply_theme, grouped_bar
+from src.viz.charts import SEQUENTIAL, apply_theme, grouped_bar
 
 page_header(
     "MTA — Modelos de Atribuição",
@@ -116,7 +116,7 @@ with tab_compare:
     c1, c2 = st.columns(2)
     with c1:
         fig = px.imshow(shares.round(1), text_auto=True, aspect="auto",
-                        color_continuous_scale="Blues", title="Heatmap: canal × modelo (% de crédito)")
+                        color_continuous_scale=SEQUENTIAL, title="Heatmap: canal × modelo (% de crédito)")
         st.plotly_chart(apply_theme(fig, height=380, legend_bottom=False), width="stretch")
     with c2:
         fig = px.line_polar(
@@ -154,7 +154,7 @@ with tab_paths:
     st.subheader("Caminhos mais frequentes")
     paths = top_paths(journeys, 15)
     fig = px.bar(paths.sort_values("clientes"), x="clientes", y="path_str", orientation="h",
-                 color="taxa_conversao", color_continuous_scale="Teal",
+                 color="taxa_conversao", color_continuous_scale=SEQUENTIAL,
                  title="Top caminhos e sua taxa de conversão", labels={"path_str": "jornada"})
     st.plotly_chart(apply_theme(fig, height=520, legend_bottom=False), width="stretch")
 

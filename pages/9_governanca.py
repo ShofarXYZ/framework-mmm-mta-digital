@@ -7,7 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, PALETTE, TEAL, page_header
+from src.utils.styling import BORDER, GOLD, NAVY, NEGATIVE, PALETTE, POSITIVE, TEAL, page_header
 from src.viz.charts import apply_theme, funnel
 
 page_header(
@@ -155,7 +155,7 @@ with tab_analysis:
         by_result.columns = ["resultado", "itens"]
         fig = px.pie(by_result, values="itens", names="resultado", hole=0.5,
                      title="Distribuição de resultados",
-                     color_discrete_sequence=[TEAL, GOLD, NAVY, "#D62828", "#7E57C2"])
+                     color_discrete_sequence=[POSITIVE, GOLD, NAVY, NEGATIVE, "#9B7EE0"])
         st.plotly_chart(apply_theme(fig, legend_bottom=False), width="stretch")
     with c2:
         by_origin = df["origem"].value_counts().reset_index()
@@ -170,7 +170,7 @@ with tab_analysis:
                      orientation="h", color="origem", color_discrete_sequence=PALETTE,
                      hover_data=["canal_driver", "resultado"],
                      title="Lift registrado por experimento")
-        fig.add_vline(x=0, line_color="#CBD5E0")
+        fig.add_vline(x=0, line_color=BORDER)
         st.plotly_chart(apply_theme(fig, height=420), width="stretch")
 
     st.subheader("Próximos passos em aberto")

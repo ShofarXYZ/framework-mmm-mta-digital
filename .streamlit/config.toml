@@ -23,6 +23,11 @@ borderColor = "#D8DFEC"
 linkColor = "#1C7293"
 codeBackgroundColor = "#F1F4FA"
 
+[client]
+# App de demonstração, sem dados sensíveis: mostrar o erro completo vale muito
+# mais do que esconder. Sem isso o Streamlit Cloud exibe apenas "redacted".
+showErrorDetails = "full"
+
 [server]
 headless = true
 

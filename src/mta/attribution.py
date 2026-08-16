@@ -23,9 +23,16 @@ import streamlit as st
 from src.data_loader import load_digital
 from src.mta.heuristics import HEURISTIC_MODELS, attribute_all, to_share
 from src.mta.journey_sim import adspend_by_channel, build_journeys
-from src.mta.dda import dda_attribution
 from src.mta.markov import markov_attribution
 from src.mta.shapley import shapley_attribution
+
+try:  # o DDA depende de scikit-learn; sem ele o app segue com as outras réguas
+    from src.mta.dda import dda_attribution
+
+    DDA_AVAILABLE = True
+except Exception:  # pragma: no cover - ambiente sem sklearn
+    dda_attribution = None
+    DDA_AVAILABLE = False
 
 MARKOV = "Markov (algorítmico)"
 SHAPLEY = "Shapley (algorítmico)"
@@ -38,7 +45,7 @@ ATTRIBUTION_MODELS = [
     "Time-Decay",
     "Position-Based (U)",
     "Last-Click",
-    DDA,
+    *( [DDA] if DDA_AVAILABLE else [] ),
     MARKOV,
     SHAPLEY,
 ]
@@ -108,13 +115,14 @@ def attribution_shares(half_life: float = 1.0) -> pd.DataFrame:
         table[SHAPLEY] = shapley_attribution(journeys, channels)["share_%"]
     except Exception:
         table[SHAPLEY] = float("nan")
-    try:
-        dda = dda_attribution(journeys, channels)
-        table[DDA] = dda["share_%"]
-        auc = float(dda.attrs.get("auc", float("nan")))
-    except Exception:
-        table[DDA] = float("nan")
-        auc = float("nan")
+    auc = float("nan")
+    if DDA_AVAILABLE:
+        try:
+            dda = dda_attribution(journeys, channels)
+            table[DDA] = dda["share_%"]
+            auc = float(dda.attrs.get("auc", float("nan")))
+        except Exception:
+            table[DDA] = float("nan")
 
     table = table.reindex(columns=[m for m in ATTRIBUTION_MODELS if m in table.columns])
     table.index.name = "canal"
@@ -186,8 +194,10 @@ def model_spread(half_life: float = 1.0) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Seletor compartilhado entre as páginas
 # ---------------------------------------------------------------------------
-def model_selector(location=st, key: str = "attr_model", default: str = DDA) -> str:
+def model_selector(location=st, key: str = "attr_model",
+                   default: str | None = None) -> str:
     """Seletor de régua de atribuição, com a escolha compartilhada entre páginas."""
+    default = default or (DDA if DDA_AVAILABLE else MARKOV)
     stored = st.session_state.get(SESSION_KEY, default)
     if stored not in ATTRIBUTION_MODELS:
         stored = default

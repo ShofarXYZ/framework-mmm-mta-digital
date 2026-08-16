@@ -17,9 +17,11 @@ from src.insights import marginal_returns, mmm_recommendation
 from src.mmm.model import contribution_summary
 from src.mta.attribution import (
     ALGORITHMIC_MODELS,
+    DDA,
     MODEL_HELP,
     MODEL_KIND,
     attribution_shares,
+    dda_signal,
     model_cpa,
     model_credit,
     model_selector,
@@ -124,6 +126,25 @@ with c2:
         f"<h4>{attr_model} · {MODEL_KIND[attr_model]}</h4><p>{MODEL_HELP[attr_model]}</p></div>",
         unsafe_allow_html=True,
     )
+    if attr_model == DDA:
+        try:
+            auc = dda_signal()
+            if auc == auc:
+                if auc < 0.6:
+                    st.caption(
+                        f"🔎 Poder de separação do modelo: **AUC {auc:.2f}**. Como 0,50 é o "
+                        "puro acaso, a jornada aqui explica pouco da conversão — e o Data-Driven "
+                        "fica mais próximo do Linear. Isso é honestidade do algoritmo, não defeito: "
+                        "sem sinal no dado, nenhum modelo consegue eleger um canal decisivo. "
+                        "Com clickstream real, essa separação costuma ser bem maior."
+                    )
+                else:
+                    st.caption(
+                        f"🔎 Poder de separação do modelo: **AUC {auc:.2f}** — a composição da "
+                        "jornada explica de forma relevante quem converte."
+                    )
+        except Exception:
+            pass
 
 try:
     attr_shares = attribution_shares()

@@ -9,6 +9,7 @@ from src import reference
 from src.data_loader import kpi_snapshot
 from src.utils.styling import BLUE, GOLD, NAVY, TEAL, fmt_money, nav_card, page_header, tokens
 from src.viz.charts import apply_theme
+from src.viz.diagrams import governance_loop_svg
 
 page_header(
     "MMM × MTA — Framework de Digital Analytics",
@@ -96,48 +97,7 @@ st.markdown(
 )
 
 
-def loop_diagram() -> go.Figure:
-    """Diagrama do loop MMM ⇄ MTA ⇄ A/B ⇄ Learning Repository (Plotly shapes)."""
-    nodes = [
-        ("MMM\nEstratégico", 0.5, 0.88, NAVY),
-        ("MTA\nTático", 0.90, 0.5, TEAL),
-        ("Testes A/B\nValidação causal", 0.5, 0.12, GOLD),
-        ("Learning\nRepository", 0.10, 0.5, BLUE),
-    ]
-    fig = go.Figure()
-    for label, x, y, color in nodes:
-        fig.add_shape(
-            type="circle", x0=x - 0.15, x1=x + 0.15, y0=y - 0.11, y1=y + 0.11,
-            fillcolor=color, line=dict(color=color), opacity=0.95, layer="below",
-        )
-        fig.add_annotation(x=x, y=y, text=f"<b>{label}</b>", showarrow=False,
-                           font=dict(color="#FFFFFF", size=13))
-
-    arrows = [(0.5, 0.75, 0.85, 0.60), (0.88, 0.38, 0.60, 0.16),
-              (0.38, 0.10, 0.14, 0.38), (0.13, 0.62, 0.40, 0.84)]
-    for x0, y0, x1, y1 in arrows:
-        fig.add_annotation(
-            x=x1, y=y1, ax=x0, ay=y0, xref="x", yref="y", axref="x", ayref="y",
-            showarrow=True, arrowhead=3, arrowsize=1.4, arrowwidth=2.2, arrowcolor="#94A3B8",
-        )
-
-    labels = [
-        (0.76, 0.76, "aponta onde investir"),
-        (0.76, 0.24, "gera hipóteses"),
-        (0.22, 0.24, "registra o aprendizado"),
-        (0.22, 0.76, "recalibra o modelo"),
-    ]
-    for x, y, text in labels:
-        fig.add_annotation(x=x, y=y, text=text, showarrow=False,
-                           font=dict(size=11, color=tokens().text_muted))
-
-    fig.update_xaxes(visible=False, range=[0, 1])
-    fig.update_yaxes(visible=False, range=[0, 1])
-    fig.update_layout(showlegend=False)
-    return apply_theme(fig, height=520, legend_bottom=False)
-
-
-st.plotly_chart(loop_diagram(), width="stretch")
+st.markdown(governance_loop_svg(), unsafe_allow_html=True)
 
 st.divider()
 

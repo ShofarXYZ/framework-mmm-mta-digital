@@ -114,7 +114,7 @@ weeks = len(data)
 # ---------------------------------------------------------------------------
 # Régua de atribuição — a leitura tática da fatia digital
 # ---------------------------------------------------------------------------
-st.markdown("#### 🎚️ Escolha a régua de atribuição do digital")
+st.markdown("#### ⚖️ Escolha a régua de atribuição do digital")
 c1, c2 = st.columns([2, 3])
 with c1:
     attr_model = model_selector(c1, key="mmm_journey_model")
@@ -141,7 +141,7 @@ st.info(
     "ela orienta como a fatia digital se reparte entre os canais da jornada. As duas coisas "
     "aparecem juntas nas quatro etapas abaixo, e é exatamente assim que o framework funciona: "
     "**estratégico define o quanto, tático define o onde.**",
-    icon="🎚️",
+    icon="⚖️",
 )
 spacer(8)
 
@@ -598,7 +598,7 @@ with tab3:
                     + (f"<br><br>⚠️ Com esta régua, {' e '.join(sem_credito)} não recebe crédito "
                        "nenhum — e por isso ficaria sem verba nesta divisão. É um bom exemplo de "
                        "como a régua errada apaga um canal do mapa." if sem_credito else ""),
-                    "🎚️",
+                    "⚖️",
                 )
                 spacer(8)
 

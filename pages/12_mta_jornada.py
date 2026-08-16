@@ -130,7 +130,7 @@ entre si. Numa operação real, essa jornada viria do rastreamento verdadeiro e 
 # ---------------------------------------------------------------------------
 # Régua de atribuição — vale para as 4 etapas
 # ---------------------------------------------------------------------------
-st.markdown("#### 🎚️ Escolha a régua de atribuição")
+st.markdown("#### ⚖️ Escolha a régua de atribuição")
 c1, c2 = st.columns([2, 3])
 with c1:
     model = model_selector(c1, key="mta_journey_model")
@@ -240,7 +240,7 @@ with tab1:
         f"**{credit_df.iloc[0]['canal']}** ({credit_df.iloc[0]['credito_%']:.1f}%). "
         "Troque a régua lá em cima e o ranking muda. Não é erro de conta: é a natureza da "
         "atribuição — cada régua responde a uma pergunta diferente sobre a mesma jornada.",
-        "🎚️",
+        "⚖️",
     )
 
     c1, c2 = st.columns(2)
@@ -455,7 +455,7 @@ with tab3:
         f"A simulação abaixo usa o custo por conversão calculado pela régua **{model}**. "
         "Trocar a régua no topo da página muda o CPA de cada canal e, com ele, a divisão da verba "
         "e o total de conversões previsto.",
-        icon="🎚️",
+        icon="⚖️",
     )
 
     st.caption(

@@ -45,6 +45,9 @@ def apply_theme(fig: go.Figure, height: int = 420, legend_bottom: bool = True) -
         margin=dict(l=10, r=20, t=64, b=90 if legend_bottom else 50),
         font=dict(family=FONT, size=13, color=t.text),
         title=dict(
+            # sem `text` explícito o Plotly chega a renderizar a string "undefined"
+            # no topo da figura quando o gráfico não tem título
+            text=fig.layout.title.text or "",
             font=dict(size=15.5, color=t.text, family=FONT),
             x=0, xanchor="left", y=0.97, yanchor="top", pad=dict(b=14),
         ),

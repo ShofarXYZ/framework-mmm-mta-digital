@@ -38,7 +38,7 @@ st.caption(
     f"investimento atual no período: {fmt_money(total_current)}"
 )
 
-tab_opt, tab_whatif = st.tabs(["🎯 Otimização", "🎚️ Cenário 'E se'"])
+tab_opt, tab_whatif = st.tabs(["🎯 Otimização", "🧮 Cenário 'E se'"])
 
 # ---------------------------------------------------------------------------
 # Otimização

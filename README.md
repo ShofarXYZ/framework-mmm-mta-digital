@@ -67,6 +67,42 @@ superfícies e o texto mudam.
 
 ---
 
+## Páginas guiadas (para público leigo)
+
+Duas páginas percorrem a escada clássica da analítica, com o jargão sempre traduzido e uma
+simulação interativa no meio do caminho:
+
+| Passo | Pergunta | O que a página entrega |
+|---|---|---|
+| 1 · Descritivo | O que está acontecendo? | Os fatos: investimento, vendas/conversões, período |
+| 2 · Diagnóstico | Por que aconteceu? | As causas: contribuição por mídia, crédito por canal, fatores externos |
+| 3 · Preditivo | O que vai acontecer? | **Simulação:** verba de R$ 1k a R$ 1M, escolha de mídias e horizonte |
+| 4 · Prescritivo | O que devo fazer? | A decisão: onde colocar, de onde tirar, e como provar que está certo |
+
+**🧭 MMM na prática** trabalha no horizonte de calendário — bimestre, trimestre, semestre, ano —
+porque é assim que se decide verba de mídia, incluindo TV e jornal. A simulação aplica o
+investimento adicional sobre o padrão das últimas N semanas e roda a predição de novo, então
+adstock e saturação entram na conta: dobrar a verba não dobra o retorno, e o gráfico "quanto mais
+invisto, quanto mais vendo" mostra exatamente onde a curva cruza a linha do empate.
+
+**🧭 MTA na prática** trabalha no horizonte de operação — dia, semana, mês — porque é o ritmo de
+quem mexe em lance e criativo. Como o dataset de MTA não é série temporal, a simulação usa o
+**CPA implícito** de cada canal (vindo do modelo de atribuição) com um desconto de eficiência
+conforme a verba se afasta do patamar histórico.
+
+Três decisões de método que estão expostas na própria tela:
+
+- **A verba simulada é sempre ADICIONAL** ao que já roda. Nas duas páginas o resultado é comparado
+  com a operação atual do mesmo período — é o que evita a leitura de que uma verba pequena vai
+  mudar o patamar do negócio.
+- **Teto de concentração no MMM** (padrão 50%, ajustável). Com verbas pequenas diante do histórico
+  a saturação mal aparece, e a alocação puramente ótima manda 100% numa mídia só. O teto é gestão
+  de risco, não matemática do modelo — e está dito assim na tela.
+- **O MTA não estima saturação de verdade.** O desconto de eficiência é uma aproximação prudente;
+  quando a pergunta é "quanto cabe neste canal", a resposta correta vem do MMM.
+
+---
+
 ## Recomendação acionável
 
 As telas de MMM e MTA não param no diagnóstico: cada uma abre com um painel

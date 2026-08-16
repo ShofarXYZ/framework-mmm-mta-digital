@@ -371,6 +371,45 @@ def recommendation_panel(headline: str, detail: str, invest: str, watch: str,
         )
 
 
+def stage_header(number: int, name: str, question: str, intro: str, color: str = TEAL) -> None:
+    """Cabeçalho das etapas das páginas guiadas (Descritivo → Prescritivo)."""
+    t = tokens()
+    st.markdown(
+        f"""
+<div style="display:flex;gap:16px;align-items:flex-start;margin:4px 0 18px 0">
+  <div style="flex:0 0 46px;height:46px;border-radius:50%;background:{color};color:#FFFFFF;
+       display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:800">
+    {number}
+  </div>
+  <div style="flex:1">
+    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;
+         color:{color}">{name}</div>
+    <div style="font-size:1.32rem;font-weight:680;color:{t.text};line-height:1.35;margin-top:2px">
+      {question}</div>
+    <div style="color:{t.text_muted};font-size:0.95rem;line-height:1.6;margin-top:8px;max-width:88ch">
+      {intro}</div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
+def plain_box(title: str, text: str, icon: str = "💡", color: str = GOLD) -> None:
+    """Caixa de tradução: o mesmo achado dito em linguagem do dia a dia."""
+    t = tokens()
+    st.markdown(
+        f"""
+<div style="background:{tint(color, 0.10)};border-left:4px solid {color};border-radius:8px;
+     padding:14px 18px;margin:6px 0 14px 0">
+  <div style="font-weight:680;color:{t.text};font-size:0.95rem">{icon} {title}</div>
+  <div style="color:{t.text_muted};font-size:0.9rem;line-height:1.6;margin-top:5px">{text}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
 def theme_hint() -> None:
     """Indica o tema ativo e onde trocá-lo (o controle é nativo do Streamlit)."""
     active = theme_type()

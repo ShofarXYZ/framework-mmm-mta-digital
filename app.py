@@ -29,11 +29,13 @@ PAGES = {
         st.Page("pages/0_home.py", title="Home", icon="🏠", default=True),
     ],
     "Estratégico — MMM": [
+        st.Page("pages/11_mmm_jornada.py", title="MMM na prática (guiado)", icon="🧭"),
         st.Page("pages/1_mmm_explorer.py", title="MMM Explorer", icon="📊"),
         st.Page("pages/2_mmm_modelagem.py", title="MMM Modelagem", icon="🧪"),
         st.Page("pages/3_mmm_otimizador.py", title="Otimizador de Budget", icon="💰"),
     ],
     "Tático — MTA": [
+        st.Page("pages/12_mta_jornada.py", title="MTA na prática (guiado)", icon="🧭"),
         st.Page("pages/4_mta_atribuicao.py", title="Modelos de Atribuição", icon="🔀"),
         st.Page("pages/5_mta_markov_shapley.py", title="Markov e Shapley", icon="🕸️"),
         st.Page("pages/10_mta_propensao.py", title="Propensão à Conversão", icon="🎯"),

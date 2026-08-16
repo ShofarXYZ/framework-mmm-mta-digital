@@ -245,8 +245,29 @@ section[data-testid="stSidebar"] h3 {{ font-size: 1.02rem; margin-top: 1.1rem; }
    A solução: coluna vira flex, o card ocupa a altura toda, o rótulo reserva
    duas linhas (então todos os VALORES nascem na mesma altura) e o delta é
    empurrado para a base. */
+/* Para um card esticar até a altura do vizinho mais alto, TODOS os wrappers que
+   o Streamlit cria entre a coluna e o conteúdo precisam esticar junto. Parar no
+   primeiro filho não basta: sobra um wrapper intermediário com altura de
+   conteúdo, e os cards da mesma linha terminam em alturas diferentes. */
+div[data-testid="stColumn"], div[data-testid="column"] {{
+    display: flex;
+    flex-direction: column;
+}}
 div[data-testid="stColumn"] > div,
-div[data-testid="column"] > div {{ height: 100%; }}
+div[data-testid="column"] > div,
+div[data-testid="stColumn"] > div > div,
+div[data-testid="stColumn"] [data-testid="stVerticalBlock"],
+div[data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stColumn"] [data-testid="stElementContainer"],
+div[data-testid="stColumn"] [data-testid="stMarkdown"],
+div[data-testid="stColumn"] [data-testid="stMarkdownContainer"] {{
+    height: 100%;
+}}
+/* ...mas só o conteúdo em card deve esticar: gráficos e tabelas mantêm a
+   própria altura, senão ficam esticados e distorcidos. */
+div[data-testid="stColumn"] [data-testid="stPlotlyChart"],
+div[data-testid="stColumn"] [data-testid="stDataFrame"],
+div[data-testid="stColumn"] [data-testid="stExpander"] {{ height: auto; }}
 div[data-testid="stMetric"] {{
     margin-bottom: 2px;
     background: {t.surface};
@@ -512,13 +533,60 @@ def theme_hint() -> None:
     )
 
 
-def fmt_money(value: float, prefix: str = "R$ ") -> str:
-    """Formata número grande de forma compacta e legível."""
+def brl(value: float, decimals: int = 2, prefix: str = "R$ ") -> str:
+    """Moeda no padrão brasileiro: R$ 13.450,00.
+
+    O Streamlit não tem preset de Real e o `format` printf das tabelas não faz
+    separador de milhar, então a formatação é feita aqui e o valor entra na
+    tabela já como texto.
+    """
     try:
         value = float(value)
     except (TypeError, ValueError):
         return "—"
-    for unit, div in (("B", 1e9), ("M", 1e6), ("k", 1e3)):
+    if value != value:  # NaN
+        return "—"
+    # Formata no padrão en-US e troca os separadores: 1,234.56 -> 1.234,56
+    formatted = f"{abs(value):,.{decimals}f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+    sign = "-" if value < 0 else ""
+    return f"{sign}{prefix}{formatted}"
+
+
+def brl_compact(value: float, prefix: str = "R$ ") -> str:
+    """Versão curta para espaços apertados: R$ 13,5 mi."""
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return "—"
+    if value != value:
+        return "—"
+    for unit, div in ((" bi", 1e9), (" mi", 1e6), (" mil", 1e3)):
         if abs(value) >= div:
-            return f"{prefix}{value / div:,.1f}{unit}".replace(",", ".")
-    return f"{prefix}{value:,.0f}".replace(",", ".")
+            number = f"{abs(value) / div:,.1f}".replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+            sign = "-" if value < 0 else ""
+            return f"{sign}{prefix}{number}{unit}"
+    return brl(value, 2, prefix)
+
+
+def brl_series(values) -> list[str]:
+    """Aplica `brl` a uma coluna inteira, para exibição em tabela."""
+    return [brl(v) for v in values]
+
+
+def money_columns(df, columns: list[str]):
+    """Devolve uma cópia do dataframe com as colunas monetárias já em texto R$.
+
+    Use junto de `st.column_config.TextColumn` — a formatação brasileira exige
+    texto, então a ordenação por clique naquela coluna deixa de ser numérica;
+    por isso as tabelas do app já vêm ordenadas pelo critério relevante.
+    """
+    out = df.copy()
+    for col in columns:
+        if col in out.columns:
+            out[col] = brl_series(out[col])
+    return out
+
+
+def fmt_money(value: float, prefix: str = "R$ ") -> str:
+    """Compatibilidade: agora entrega o padrão brasileiro completo."""
+    return brl(value, 2, prefix)

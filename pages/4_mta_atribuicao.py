@@ -12,7 +12,7 @@ from src.mta.heuristics import HEURISTIC_MODELS, attribute_all, cpa_table, to_sh
 from src.mta.journey_sim import adspend_by_channel, build_journeys, journey_stats, top_paths
 from src.insights import mta_recommendation
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, PALETTE, TEAL, fmt_money, page_header, recommendation_panel
+from src.utils.styling import GOLD, NAVY, PALETTE, TEAL, fmt_money, money_columns, page_header, recommendation_panel
 from src.viz.charts import apply_theme, grouped_bar, sequential
 
 page_header(
@@ -110,16 +110,16 @@ if rec["ok"]:
     )
     with st.expander("Ver o cálculo: crédito por modelo e realocação de budget sugerida"):
         st.dataframe(
-            rec["table"], width="stretch", hide_index=True,
+            money_columns(rec["table"], ["investimento", "budget_pelo_last_click", "budget_pelo_credito_justo", "realocar"]), width="stretch", hide_index=True,
             column_config={
                 "canal": "Canal",
                 "credito_last_click_%": st.column_config.NumberColumn("Crédito last-click", format="%.1f%%"),
                 "credito_justo_%": st.column_config.NumberColumn("Crédito justo", format="%.1f%%"),
                 "gap_pp": st.column_config.NumberColumn("Gap (p.p.)", format="%+.1f"),
-                "investimento": st.column_config.NumberColumn("AdSpend atual", format="%.0f"),
-                "budget_pelo_last_click": st.column_config.NumberColumn("Budget pelo last-click", format="%.0f"),
-                "budget_pelo_credito_justo": st.column_config.NumberColumn("Budget pelo crédito justo", format="%.0f"),
-                "realocar": st.column_config.NumberColumn("Realocar", format="%+.0f"),
+                "investimento": st.column_config.TextColumn("AdSpend atual"),
+                "budget_pelo_last_click": st.column_config.TextColumn("Budget pelo last-click"),
+                "budget_pelo_credito_justo": st.column_config.TextColumn("Budget pelo crédito justo"),
+                "realocar": st.column_config.TextColumn("Realocar"),
             },
         )
         st.caption(

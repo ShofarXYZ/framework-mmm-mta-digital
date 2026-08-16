@@ -30,7 +30,7 @@ from src.mmm.model import (
 from src.mmm.transforms import FUNCTIONAL_FORMS, default_hill_params, hill_saturation
 from src.insights import mmm_recommendation
 from src.utils import repository
-from src.utils.styling import GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, fmt_money, page_header, recommendation_panel, tokens
+from src.utils.styling import GOLD, NAVY, NEGATIVE, POSITIVE, TEAL, fmt_money, money_columns, page_header, recommendation_panel, tokens
 from src.viz.charts import apply_theme, diverging, stacked_area
 
 page_header(
@@ -187,21 +187,21 @@ if rec["ok"]:
     with st.expander("Ver o plano e o retorno marginal de cada canal"):
         plan = rec["plan"].copy()
         st.dataframe(
-            plan, width="stretch", hide_index=True,
+            money_columns(plan, ["valor", "investimento_atual", "investimento_sugerido"]), width="stretch", hide_index=True,
             column_config={
-                "valor": st.column_config.NumberColumn("Valor", format="%.0f"),
-                "investimento_atual": st.column_config.NumberColumn("Investimento atual", format="%.0f"),
-                "investimento_sugerido": st.column_config.NumberColumn("Sugerido", format="%.0f"),
+                "valor": st.column_config.TextColumn("Valor"),
+                "investimento_atual": st.column_config.TextColumn("Investimento atual"),
+                "investimento_sugerido": st.column_config.TextColumn("Sugerido"),
                 "retorno_marginal": st.column_config.NumberColumn("Retorno marginal", format="%.2f"),
                 "por_que": st.column_config.TextColumn("Por quê", width="large"),
             },
         )
         ranking = rec["table"][["canal_label", "investimento", "roi_medio", "retorno_marginal", "saturacao"]]
         st.dataframe(
-            ranking, width="stretch", hide_index=True,
+            money_columns(ranking, ["investimento"]), width="stretch", hide_index=True,
             column_config={
                 "canal_label": "Canal",
-                "investimento": st.column_config.NumberColumn("Investimento", format="%.0f"),
+                "investimento": st.column_config.TextColumn("Investimento"),
                 "roi_medio": st.column_config.NumberColumn("ROI médio", format="%.2f"),
                 "retorno_marginal": st.column_config.NumberColumn("Retorno marginal (nível atual)", format="%.2f"),
                 "saturacao": st.column_config.ProgressColumn("Saturação ao dobrar", min_value=0.0,
@@ -329,12 +329,12 @@ with tab_decomp:
         display = summary.copy()
         display["canal"] = display["canal"].map(lambda c: label(c) if c != "Base" else "Base")
         st.dataframe(
-            display.round(2), width="stretch", hide_index=True,
+            money_columns(display.round(2), ["contribuicao", "investimento"]), width="stretch", hide_index=True,
             column_config={
-                "contribuicao": st.column_config.NumberColumn("Contribuição", format="%.0f"),
+                "contribuicao": st.column_config.TextColumn("Contribuição"),
                 "% do previsto": st.column_config.ProgressColumn(
                     "% do total", min_value=0, max_value=100, format="%.1f%%"),
-                "investimento": st.column_config.NumberColumn("Investimento", format="%.0f"),
+                "investimento": st.column_config.TextColumn("Investimento"),
                 "ROI (sales/R$)": st.column_config.NumberColumn("ROI (venda por R$)", format="%.2f"),
             },
         )

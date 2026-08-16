@@ -15,6 +15,16 @@ import streamlit as st
 from src.data_loader import DIGITAL_CHANNELS, MEDIA_CHANNELS, OFFLINE_CHANNELS, label
 from src.insights import marginal_returns, mmm_recommendation
 from src.mmm.model import contribution_summary
+from src.mta.attribution import (
+    ALGORITHMIC_MODELS,
+    MODEL_HELP,
+    MODEL_KIND,
+    attribution_shares,
+    model_cpa,
+    model_credit,
+    model_selector,
+    model_spread,
+)
 from src.scenarios import (
     ALLOCATION_STRATEGIES,
     BUDGET_MAX,
@@ -32,9 +42,11 @@ from src.utils.styling import (
     TEAL,
     fmt_money,
     highlight,
+    money_columns,
     page_header,
     plain_box,
     recommendation_panel,
+    spacer,
     stage_header,
     tokens,
 )
@@ -98,6 +110,40 @@ summary = contribution_summary(result)
 total_sales_hist = float(data["sales"].sum())
 total_spend_hist = float(data[MEDIA_CHANNELS].sum().sum())
 weeks = len(data)
+
+# ---------------------------------------------------------------------------
+# Régua de atribuição — a leitura tática da fatia digital
+# ---------------------------------------------------------------------------
+st.markdown("#### 🎚️ Escolha a régua de atribuição do digital")
+c1, c2 = st.columns([2, 3])
+with c1:
+    attr_model = model_selector(c1, key="mmm_journey_model")
+with c2:
+    st.markdown(
+        f"<div class='mmm-card' style='border-top-color:{GOLD}'>"
+        f"<h4>{attr_model} · {MODEL_KIND[attr_model]}</h4><p>{MODEL_HELP[attr_model]}</p></div>",
+        unsafe_allow_html=True,
+    )
+
+try:
+    attr_shares = attribution_shares()
+    attr_share = attr_shares[attr_model]
+    attr_cpa = model_cpa(attr_model)
+    attr_ok = True
+except Exception as exc:  # a página de MMM não pode quebrar por causa do MTA
+    attr_shares = attr_share = attr_cpa = None
+    attr_ok = False
+    st.caption(f"Leitura tática indisponível: {exc}")
+
+st.info(
+    "**Divisão de trabalho entre as duas camadas.** O MMM decide o tamanho do bolo — quanto vai "
+    "para TV, jornal e para o digital como um todo. A régua de atribuição não muda esse total: "
+    "ela orienta como a fatia digital se reparte entre os canais da jornada. As duas coisas "
+    "aparecem juntas nas quatro etapas abaixo, e é exatamente assim que o framework funciona: "
+    "**estratégico define o quanto, tático define o onde.**",
+    icon="🎚️",
+)
+spacer(8)
 
 tab1, tab2, tab3, tab4 = st.tabs(
     [
@@ -176,14 +222,46 @@ with tab1:
         st.plotly_chart(apply_theme(fig), width="stretch")
     with c2:
         st.dataframe(
-            spend[["canal", "investimento", "share"]], width="stretch", hide_index=True,
+            money_columns(spend[["canal", "investimento", "share"]], ["investimento"]), width="stretch", hide_index=True,
             column_config={
                 "canal": "Mídia",
-                "investimento": st.column_config.NumberColumn("Investido", format="%.0f"),
+                "investimento": st.column_config.TextColumn("Investido"),
                 "share": st.column_config.ProgressColumn("Fatia da verba", min_value=0,
                                                          max_value=100, format="%.1f%%"),
             },
         )
+
+    if attr_ok:
+        st.subheader(f"Dentro do digital: como a régua {attr_model} reparte o crédito")
+        tactical = pd.DataFrame({
+            "canal": attr_share.index,
+            "credito_%": attr_share.to_numpy(),
+        }).sort_values("credito_%", ascending=False)
+        c1, c2 = st.columns([3, 2])
+        with c1:
+            fig = px.bar(tactical.sort_values("credito_%"), x="credito_%", y="canal",
+                         orientation="h", color_discrete_sequence=[TEAL],
+                         title=f"Crédito das conversões digitais segundo {attr_model}")
+            st.plotly_chart(apply_theme(fig, height=330, legend_bottom=False), width="stretch")
+        with c2:
+            st.dataframe(
+                tactical, width="stretch", hide_index=True,
+                column_config={
+                    "canal": "Canal da jornada",
+                    "credito_%": st.column_config.ProgressColumn("Crédito", min_value=0,
+                                                                 max_value=100, format="%.1f%%"),
+                },
+            )
+        plain_box(
+            "Duas listas de canais, dois mundos",
+            "Repare que os nomes aqui (Social Media, Email, PPC, SEO, Referral) são diferentes dos "
+            "de cima (TV, Instagram, Google Ads...). Não é inconsistência: o MMM enxerga **compra de "
+            "mídia** — onde a verba foi gasta — e o MTA enxerga **pontos de contato da jornada** — "
+            "por onde a pessoa passou. O MMM decide quanto o digital merece no total; esta régua "
+            "orienta como distribuir esse valor por dentro.",
+            "🧭",
+        )
+        spacer(6)
 
     digital_share = 100 * float(data[DIGITAL_CHANNELS].sum().sum()) / total_spend_hist
     plain_box(
@@ -253,12 +331,12 @@ with tab2:
     best_roi = media_summary.sort_values("ROI (sales/R$)", ascending=False).iloc[0]
     worst_roi = media_summary.sort_values("ROI (sales/R$)").iloc[0]
     st.dataframe(
-        media_summary[["canal_label", "investimento", "contribuicao", "% do previsto", "ROI (sales/R$)"]],
+        money_columns(media_summary[["canal_label", "investimento", "contribuicao", "% do previsto", "ROI (sales/R$)"]], ["investimento", "contribuicao"]),
         width="stretch", hide_index=True,
         column_config={
             "canal_label": "Mídia",
-            "investimento": st.column_config.NumberColumn("Investido", format="%.0f"),
-            "contribuicao": st.column_config.NumberColumn("Vendas que gerou", format="%.0f"),
+            "investimento": st.column_config.TextColumn("Investido"),
+            "contribuicao": st.column_config.TextColumn("Vendas que gerou"),
             "% do previsto": st.column_config.ProgressColumn("Fatia das vendas", min_value=0,
                                                             max_value=100, format="%.1f%%"),
             "ROI (sales/R$)": st.column_config.NumberColumn("Retorno por R$", format="%.2f"),
@@ -276,6 +354,33 @@ with tab2:
         "real seguinte rende menos. Quanto cabe em cada uma é o que o próximo passo calcula.",
         "🔍",
     )
+
+    if attr_ok:
+        st.subheader("Cruzando as duas camadas")
+        digital_contrib = float(
+            sum(contrib[c].sum() for c in DIGITAL_CHANNELS if c in contrib.columns)
+        )
+        total_pred = float(contrib["previsto"].sum())
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Digital na contribuição total (MMM)",
+                  f"{100 * digital_contrib / total_pred:.1f}%",
+                  help="Fatia das vendas que o MMM atribui aos canais digitais.")
+        c2.metric("Canal digital nº 1 pela régua", str(attr_share.idxmax()),
+                  f"{attr_share.max():.1f}% do crédito")
+        spread_tbl = model_spread()
+        c3.metric("Canal mais dependente da régua", str(spread_tbl.iloc[0]["canal"]),
+                  f"varia {spread_tbl.iloc[0]['variacao_pp']:.1f} p.p.")
+
+        plain_box(
+            "Por que as duas leituras precisam conversar",
+            f"O MMM diz que o digital responde por **{100 * digital_contrib / total_pred:.1f}%** das "
+            f"vendas previstas. A régua **{attr_model}** diz que, dentro do digital, quem mais "
+            f"contribui é **{attr_share.idxmax()}**. Se você só olhasse o MMM, saberia o tamanho do "
+            "digital mas não onde mexer; se só olhasse a atribuição, otimizaria o digital sem saber "
+            "se ele merece mais ou menos verba que a TV. As duas juntas fecham a decisão.",
+            "🔗",
+        )
+        spacer(6)
 
     st.subheader("Fatores fora do seu controle")
     c1, c2 = st.columns(2)
@@ -403,14 +508,15 @@ with tab3:
             st.plotly_chart(apply_theme(fig, height=400, legend_bottom=False), width="stretch")
         with c2:
             st.dataframe(
-                table[["canal_label", "investimento", "share_%", "vendas_incrementais", "retorno_por_real"]],
+                money_columns(table[["canal_label", "investimento", "share_%", "vendas_incrementais", "retorno_por_real"]],
+                              ["investimento", "vendas_incrementais"]),
                 width="stretch", hide_index=True,
                 column_config={
                     "canal_label": "Mídia",
-                    "investimento": st.column_config.NumberColumn("Recebe", format="%.0f"),
+                    "investimento": st.column_config.TextColumn("Recebe"),
                     "share_%": st.column_config.ProgressColumn("Fatia", min_value=0, max_value=100,
                                                                format="%.0f%%"),
-                    "vendas_incrementais": st.column_config.NumberColumn("Gera em vendas", format="%.0f"),
+                    "vendas_incrementais": st.column_config.TextColumn("Gera em vendas"),
                     "retorno_por_real": st.column_config.NumberColumn("Por R$", format="%.2f"),
                 },
             )
@@ -434,6 +540,67 @@ with tab3:
             }[scenario["strategy"]],
             "🧠",
         )
+
+        if attr_ok:
+            digital_budget = float(
+                sum(v for k, v in scenario["allocation"].items() if k in DIGITAL_CHANNELS)
+            )
+            if digital_budget > 0:
+                st.markdown("#### 🔬 Detalhamento tático da fatia digital")
+                st.caption(
+                    f"Do total simulado, **{fmt_money(digital_budget)}** foram para mídias digitais. "
+                    f"A régua **{attr_model}** sugere como distribuir esse valor entre os canais da "
+                    "jornada — e o custo por conversão de cada um estima o retorno em conversões."
+                )
+                split = pd.DataFrame({
+                    "canal": attr_share.index,
+                    "credito_%": attr_share.to_numpy(),
+                })
+                split["investimento"] = digital_budget * split["credito_%"] / 100
+                cpa_map = attr_cpa.set_index("canal")["cpa"]
+                split["cpa"] = cpa_map.reindex(split["canal"]).to_numpy()
+                split["conversoes_estimadas"] = split.apply(
+                    lambda r: r["investimento"] / r["cpa"] if r["cpa"] and r["cpa"] == r["cpa"] and r["cpa"] > 0 else float("nan"),
+                    axis=1,
+                )
+                split = split.sort_values("investimento", ascending=False)
+
+                c1, c2 = st.columns([3, 2])
+                with c1:
+                    fig = px.bar(split.sort_values("investimento"), x="investimento", y="canal",
+                                 orientation="h", color_discrete_sequence=[GOLD],
+                                 title=f"Fatia digital repartida pela régua {attr_model}")
+                    st.plotly_chart(apply_theme(fig, height=340, legend_bottom=False),
+                                    width="stretch")
+                with c2:
+                    st.dataframe(
+                        money_columns(split, ["investimento", "cpa"]),
+                        width="stretch", hide_index=True,
+                        column_config={
+                            "canal": "Canal",
+                            "credito_%": st.column_config.NumberColumn("Crédito", format="%.1f%%"),
+                            "investimento": st.column_config.TextColumn("Recebe"),
+                            "cpa": st.column_config.TextColumn("Custo/conversão"),
+                            "conversoes_estimadas": st.column_config.NumberColumn("Conversões", format="%.0f"),
+                        },
+                    )
+
+                total_conv = float(split["conversoes_estimadas"].sum(skipna=True))
+                sem_credito = split[split["credito_%"] <= 0.01]["canal"].tolist()
+                plain_box(
+                    "Como ler este detalhamento",
+                    f"Os mesmos {fmt_money(digital_budget)} rendem cerca de "
+                    f"**{total_conv:,.0f} conversões** sob a régua **{attr_model}**. "
+                    "Troque a régua no topo da página e este quadro inteiro muda — mesma verba, "
+                    "mesma operação, leitura diferente. É por isso que a escolha da régua precisa "
+                    "ser combinada com a diretoria ANTES de a campanha rodar, não depois."
+                    .replace(",", ".")
+                    + (f"<br><br>⚠️ Com esta régua, {' e '.join(sem_credito)} não recebe crédito "
+                       "nenhum — e por isso ficaria sem verba nesta divisão. É um bom exemplo de "
+                       "como a régua errada apaga um canal do mapa." if sem_credito else ""),
+                    "🎚️",
+                )
+                spacer(8)
 
         st.markdown("#### 📈 E se a verba fosse outra?")
         with st.spinner("Testando outros valores de verba..."):
@@ -543,10 +710,10 @@ with tab4:
         st.subheader("O ranking completo, em ordem de prioridade")
         ranking = rec["table"][["canal_label", "investimento", "roi_medio", "retorno_marginal", "saturacao"]]
         st.dataframe(
-            ranking, width="stretch", hide_index=True,
+            money_columns(ranking, ["investimento"]), width="stretch", hide_index=True,
             column_config={
                 "canal_label": "Mídia",
-                "investimento": st.column_config.NumberColumn("Investido hoje", format="%.0f"),
+                "investimento": st.column_config.TextColumn("Investido hoje"),
                 "roi_medio": st.column_config.NumberColumn("Retorno médio", format="%.2f"),
                 "retorno_marginal": st.column_config.NumberColumn("Retorno do PRÓXIMO real", format="%.2f"),
                 "saturacao": st.column_config.ProgressColumn("Quanto já saturou", min_value=0.0,
@@ -569,6 +736,46 @@ with tab4:
                 + ". Colocar mais dinheiro nelas é jogar contra a matemática.",
                 icon="📉",
             )
+
+    if attr_ok:
+        st.subheader("E dentro do digital, por onde começar")
+        best = attr_cpa.dropna(subset=["cpa"]).head(1)
+        worst = attr_cpa.dropna(subset=["cpa"]).tail(1)
+        if len(best) and len(worst):
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown(
+                    f"<div class='mmm-card' style='border-top-color:{POSITIVE}'>"
+                    f"<h4 style='color:{POSITIVE}'>➕ Melhor custo por conversão: {best.iloc[0]['canal']}</h4>"
+                    f"<p>Traz conversão a <b>{fmt_money(best.iloc[0]['cpa'])}</b> segundo a régua "
+                    f"{attr_model}, com {best.iloc[0]['credito_%']:.1f}% do crédito. "
+                    "É por onde a fatia digital deve começar.</p></div>",
+                    unsafe_allow_html=True,
+                )
+            with c2:
+                st.markdown(
+                    f"<div class='mmm-card' style='border-top-color:{NEGATIVE}'>"
+                    f"<h4 style='color:{NEGATIVE}'>⚠️ Custo mais alto: {worst.iloc[0]['canal']}</h4>"
+                    f"<p>Cada conversão sai por <b>{fmt_money(worst.iloc[0]['cpa'])}</b>. "
+                    "Antes de cortar, confira se ele não é o canal que apresenta a marca — "
+                    "custo alto no topo do funil costuma ser preço de descoberta, não desperdício."
+                    "</p></div>",
+                    unsafe_allow_html=True,
+                )
+            spacer(14)
+            plain_box(
+                "A ordem correta da decisão",
+                f"1. O <b>MMM</b> define quanto do orçamento vai para o digital como um todo — "
+                f"essa é a decisão de {fmt_money(rec['amount']) if rec.get('ok') else 'realocação'} "
+                "que aparece acima.<br>"
+                f"2. A <b>régua {attr_model}</b> orienta como repartir esse valor entre os canais "
+                "da jornada.<br>"
+                "3. O <b>teste de incrementalidade</b> confirma se a leitura estava certa.<br><br>"
+                "Inverter essa ordem é o erro mais comum do mercado: otimizar o digital no detalhe "
+                "enquanto o tamanho do bolo digital está errado.",
+                "🧭",
+            )
+            spacer(6)
 
     st.subheader("Antes de executar: prove que o modelo está certo")
     plain_box(

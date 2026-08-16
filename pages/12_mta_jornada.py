@@ -14,6 +14,17 @@ import streamlit as st
 
 from src.data_loader import load_digital
 from src.insights import mta_recommendation
+from src.mta.attribution import (
+    ALGORITHMIC_MODELS,
+    ATTRIBUTION_MODELS,
+    MODEL_HELP,
+    MODEL_KIND,
+    attribution_shares,
+    model_cpa,
+    model_credit,
+    model_selector,
+    model_spread,
+)
 from src.mta.heuristics import attribute_all, to_share
 from src.mta.journey_sim import adspend_by_channel, build_journeys, journey_stats, top_paths
 from src.mta.markov import markov_attribution
@@ -34,9 +45,11 @@ from src.utils.styling import (
     TEAL,
     fmt_money,
     highlight,
+    money_columns,
     page_header,
     plain_box,
     recommendation_panel,
+    spacer,
     stage_header,
     tokens,
 )
@@ -114,6 +127,33 @@ entre si. Numa operação real, essa jornada viria do rastreamento verdadeiro e 
         """
     )
 
+# ---------------------------------------------------------------------------
+# Régua de atribuição — vale para as 4 etapas
+# ---------------------------------------------------------------------------
+st.markdown("#### 🎚️ Escolha a régua de atribuição")
+c1, c2 = st.columns([2, 3])
+with c1:
+    model = model_selector(c1, key="mta_journey_model")
+with c2:
+    st.markdown(
+        f"<div class='mmm-card' style='border-top-color:{GOLD}'>"
+        f"<h4>{model} · {MODEL_KIND[model]}</h4><p>{MODEL_HELP[model]}</p></div>",
+        unsafe_allow_html=True,
+    )
+
+shares_all = attribution_shares()
+model_share = shares_all[model]
+credit = model_credit(model)
+cpa_table = model_cpa(model)
+
+st.caption(
+    "Esta escolha atravessa as quatro etapas abaixo: ela define o crédito de cada canal, "
+    "o custo por conversão, como a verba é dividida na simulação e a recomendação final. "
+    "Troque a régua e veja tudo mudar — é a demonstração mais direta de por que atribuição é "
+    "decisão de governança, não um default de ferramenta."
+)
+spacer(10)
+
 tab1, tab2, tab3, tab4 = st.tabs(
     [
         "1️⃣ Descritivo — o que aconteceu",
@@ -167,6 +207,40 @@ with tab1:
         "“depois foi para”. Barras mais longas são caminhos mais comuns; a cor mostra quais desses "
         "caminhos convertem melhor. Note que os caminhos campeões quase nunca têm um canal só.",
         "📖",
+    )
+
+    st.subheader(f"Quanto cada canal leva de crédito — régua: {model}")
+    credit_df = pd.DataFrame({
+        "canal": model_share.index,
+        "credito_%": model_share.to_numpy(),
+        "conversoes": credit.reindex(model_share.index).to_numpy(),
+        "investimento": adspend.reindex(model_share.index).fillna(0.0).to_numpy(),
+    }).sort_values("credito_%", ascending=False)
+
+    c1, c2 = st.columns([3, 2])
+    with c1:
+        fig = px.bar(credit_df.sort_values("credito_%"), x="credito_%", y="canal",
+                     orientation="h", color_discrete_sequence=[TEAL],
+                     title=f"Crédito das conversões segundo {model}")
+        st.plotly_chart(apply_theme(fig, height=360, legend_bottom=False), width="stretch")
+    with c2:
+        st.dataframe(
+            money_columns(credit_df, ["investimento"]), width="stretch", hide_index=True,
+            column_config={
+                "canal": "Canal",
+                "credito_%": st.column_config.ProgressColumn("Crédito", min_value=0, max_value=100,
+                                                             format="%.1f%%"),
+                "conversoes": st.column_config.NumberColumn("Conversões", format="%.0f"),
+                "investimento": st.column_config.TextColumn("Investido"),
+            },
+        )
+    plain_box(
+        "Este número não é absoluto — ele depende da régua",
+        f"Com a régua **{model}**, quem leva mais crédito é "
+        f"**{credit_df.iloc[0]['canal']}** ({credit_df.iloc[0]['credito_%']:.1f}%). "
+        "Troque a régua lá em cima e o ranking muda. Não é erro de conta: é a natureza da "
+        "atribuição — cada régua responde a uma pergunta diferente sobre a mesma jornada.",
+        "🎚️",
     )
 
     c1, c2 = st.columns(2)
@@ -226,17 +300,8 @@ with tab2:
             """
         )
 
-    st.subheader("A régua que aprende sozinha")
-    with st.spinner("Calculando o crédito algorítmico..."):
-        try:
-            markov = markov_attribution(journeys, channels)
-            markov_share = (markov["removal_effect_norm"] * 100).rename("Markov")
-        except Exception as exc:
-            markov_share = pd.Series(dtype=float)
-            st.warning(f"Não foi possível calcular o modelo algorítmico: {exc}")
-
-    if len(markov_share):
-        full = heuristics.join(markov_share, how="left").fillna(0.0)
+    st.subheader(f"A sua régua ({model}) contra o padrão de mercado (last-click)")
+    if model in ALGORITHMIC_MODELS:
         plain_box(
             "Como o modelo algorítmico decide",
             "Em vez de usar uma regra fixa, ele faz uma pergunta muito mais inteligente: "
@@ -246,25 +311,36 @@ with tab2:
             "do Google Analytics, e é o mais próximo de uma medida de causa que a atribuição alcança.",
             "🧠",
         )
-
-        comparison = pd.DataFrame({
-            "canal": full.index,
-            "Pelo último clique (%)": full["Last-Click"].to_numpy(),
-            "Pelo modelo algorítmico (%)": full["Markov"].to_numpy(),
-        })
-        comparison["Diferença (p.p.)"] = (
-            comparison["Pelo modelo algorítmico (%)"] - comparison["Pelo último clique (%)"]
+    elif model == "Last-Click":
+        plain_box(
+            "Você escolheu justamente o padrão de mercado",
+            "Com o last-click selecionado, a comparação abaixo fica plana — é o modelo contra ele "
+            "mesmo. Troque para **Markov** ou **Shapley** no topo da página para ver o tamanho da "
+            "distorção que o último clique introduz.",
+            "🪞",
         )
-        comparison = comparison.sort_values("Diferença (p.p.)", ascending=False)
+
+    full = shares_all
+    comparison = pd.DataFrame({
+        "canal": full.index,
+        "Pelo último clique (%)": full["Last-Click"].to_numpy(),
+        "Pela régua escolhida (%)": full[model].to_numpy(),
+    })
+    comparison["Diferença (p.p.)"] = (
+        comparison["Pela régua escolhida (%)"] - comparison["Pelo último clique (%)"]
+    )
+    comparison = comparison.sort_values("Diferença (p.p.)", ascending=False)
+
+    if True:
 
         c1, c2 = st.columns([3, 2])
         with c1:
             fig = go.Figure()
             fig.add_bar(x=comparison["canal"], y=comparison["Pelo último clique (%)"],
                         name="Último clique", marker_color=NAVY)
-            fig.add_bar(x=comparison["canal"], y=comparison["Pelo modelo algorítmico (%)"],
-                        name="Modelo algorítmico", marker_color=GOLD)
-            fig.update_layout(barmode="group", title="O quanto o último clique erra",
+            fig.add_bar(x=comparison["canal"], y=comparison["Pela régua escolhida (%)"],
+                        name=model, marker_color=GOLD)
+            fig.update_layout(barmode="group", title=f"Último clique × {model}",
                               bargap=0.28, yaxis_title="crédito (%)")
             st.plotly_chart(apply_theme(fig, height=420), width="stretch")
         with c2:
@@ -273,7 +349,7 @@ with tab2:
                 column_config={
                     "canal": "Canal",
                     "Pelo último clique (%)": st.column_config.NumberColumn(format="%.1f%%"),
-                    "Pelo modelo algorítmico (%)": st.column_config.NumberColumn(format="%.1f%%"),
+                    "Pela régua escolhida (%)": st.column_config.NumberColumn(format="%.1f%%"),
                     "Diferença (p.p.)": st.column_config.NumberColumn(format="%+.1f"),
                 },
             )
@@ -289,6 +365,29 @@ with tab2:
             "provavelmente ele está apenas colhendo conversões que outros canais construíram.",
             "💰",
         )
+
+    st.subheader("Qual canal depende mais da régua escolhida")
+    spread = model_spread()
+    st.dataframe(
+        spread, width="stretch", hide_index=True,
+        column_config={
+            "canal": "Canal",
+            "minimo_%": st.column_config.NumberColumn("Menor crédito", format="%.1f%%"),
+            "maximo_%": st.column_config.NumberColumn("Maior crédito", format="%.1f%%"),
+            "modelo_mais_generoso": "Régua mais generosa",
+            "modelo_menos_generoso": "Régua menos generosa",
+            "variacao_pp": st.column_config.NumberColumn("Variação (p.p.)", format="%.1f"),
+        },
+    )
+    plain_box(
+        "O canal mais polêmico da sua operação",
+        f"**{spread.iloc[0]['canal']}** varia **{spread.iloc[0]['variacao_pp']:.1f} pontos "
+        f"percentuais** entre a régua mais generosa ({spread.iloc[0]['modelo_mais_generoso']}) e a "
+        f"menos generosa ({spread.iloc[0]['modelo_menos_generoso']}). Traduzindo: dependendo de qual "
+        "relatório a diretoria olhar, esse canal parece essencial ou parece desperdício. "
+        "Nenhum modelo resolve essa dúvida sozinho — só um teste de incrementalidade resolve.",
+        "⚔️",
+    )
 
     st.subheader("O fluxo da jornada")
     try:
@@ -352,6 +451,13 @@ with tab3:
                  "é isso que permite falar em 'por dia' e 'por semana'. Ajuste se souber o período real.",
         )
 
+    st.info(
+        f"A simulação abaixo usa o custo por conversão calculado pela régua **{model}**. "
+        "Trocar a régua no topo da página muda o CPA de cada canal e, com ele, a divisão da verba "
+        "e o total de conversões previsto.",
+        icon="🎚️",
+    )
+
     st.caption(
         f"💡 Você está simulando **{fmt_money(budget)}** para **{horizon_name.split(' (')[0].lower()}**"
         + (f", o que dá **{fmt_money(budget / horizon_days)} por dia**." if horizon_days > 1 else ".")
@@ -360,10 +466,9 @@ with tab3:
     if not selected:
         st.warning("Escolha ao menos um canal para simular.")
     else:
-        credit = markov_share if len(markov_share) else heuristics["Linear"]
-        # o crédito precisa estar em CONVERSÕES, não em %
-        conversions = credit / credit.sum() * float(journeys["converted"].sum())
-        scenario = mta_scenario(conversions, adspend, budget, selected, horizon_days,
+        # O crédito vem da régua escolhida no topo da página: é ela que define o
+        # custo por conversão de cada canal e, portanto, toda a simulação.
+        scenario = mta_scenario(credit, adspend, budget, selected, horizon_days,
                                 history_days, mode)
 
         if not scenario["ok"]:
@@ -420,13 +525,14 @@ with tab3:
                 st.plotly_chart(apply_theme(fig, height=420), width="stretch")
             with c2:
                 st.dataframe(
-                    table[["canal", "investimento", "cpa_hist", "cpa_estimado", "conversoes_estimadas"]],
+                    money_columns(table[["canal", "investimento", "cpa_hist", "cpa_estimado", "conversoes_estimadas"]],
+                                  ["investimento", "cpa_hist", "cpa_estimado"]),
                     width="stretch", hide_index=True,
                     column_config={
                         "canal": "Canal",
-                        "investimento": st.column_config.NumberColumn("Recebe", format="%.0f"),
-                        "cpa_hist": st.column_config.NumberColumn("Custo/conversão hoje", format="%.0f"),
-                        "cpa_estimado": st.column_config.NumberColumn("Custo/conversão no cenário", format="%.0f"),
+                        "investimento": st.column_config.TextColumn("Recebe"),
+                        "cpa_hist": st.column_config.TextColumn("Custo/conversão hoje"),
+                        "cpa_estimado": st.column_config.TextColumn("Custo/conversão no cenário"),
                         "conversoes_estimadas": st.column_config.NumberColumn("Conversões", format="%.0f"),
                     },
                 )
@@ -491,11 +597,8 @@ with tab4:
         POSITIVE,
     )
 
-    reference = heuristics.copy()
-    if len(markov_share):
-        reference = reference.join(markov_share, how="left").fillna(0.0)
-
-    rec = mta_recommendation(reference, adspend)
+    reference = shares_all
+    rec = mta_recommendation(reference, adspend, reference_models=[model])
     if not rec["ok"]:
         st.warning(f"Recomendação indisponível: {rec.get('message')}")
     else:
@@ -526,13 +629,12 @@ with tab4:
             "✅",
         )
 
-        st.subheader("Eficiência de cada canal hoje")
+        st.subheader(f"Eficiência de cada canal hoje — segundo a régua {model}")
         eff = pd.DataFrame({
             "canal": reference.index,
             "investimento": adspend.reindex(reference.index).fillna(0.0).to_numpy(),
         })
-        credit_col = "Markov" if "Markov" in reference.columns else "Linear"
-        eff["credito_%"] = reference[credit_col].to_numpy()
+        eff["credito_%"] = reference[model].to_numpy()
         total_conv = float(journeys["converted"].sum())
         eff["conversoes"] = eff["credito_%"] / 100 * total_conv
         eff["custo_por_conversao"] = np.where(
@@ -541,14 +643,14 @@ with tab4:
         eff = eff.sort_values("custo_por_conversao")
 
         st.dataframe(
-            eff, width="stretch", hide_index=True,
+            money_columns(eff, ["investimento", "custo_por_conversao"]), width="stretch", hide_index=True,
             column_config={
                 "canal": "Canal",
-                "investimento": st.column_config.NumberColumn("Investido", format="%.0f"),
+                "investimento": st.column_config.TextColumn("Investido"),
                 "credito_%": st.column_config.ProgressColumn("Crédito justo", min_value=0,
                                                              max_value=100, format="%.1f%%"),
                 "conversoes": st.column_config.NumberColumn("Conversões", format="%.0f"),
-                "custo_por_conversao": st.column_config.NumberColumn("Custo por conversão", format="%.0f"),
+                "custo_por_conversao": st.column_config.TextColumn("Custo por conversão"),
             },
         )
         plain_box(

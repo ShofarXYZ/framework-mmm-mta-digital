@@ -10,7 +10,7 @@ from src.data_loader import label
 from src.mmm.optimizer import current_allocation, optimize_budget, what_if
 from src.insights import optimizer_recommendation
 from src.utils import repository
-from src.utils.styling import GOLD, NEGATIVE, fmt_money, highlight, page_header, recommendation_panel
+from src.utils.styling import GOLD, NEGATIVE, fmt_money, highlight, money_columns, page_header, recommendation_panel
 from src.viz.charts import apply_theme, waterfall_compare
 
 page_header(
@@ -106,11 +106,11 @@ with tab_opt:
         display = table.copy()
         display["canal"] = labels
         st.dataframe(
-            display.round(1), width="stretch", hide_index=True,
+            money_columns(display.round(1), ["alocacao_atual", "alocacao_otima", "delta"]), width="stretch", hide_index=True,
             column_config={
-                "alocacao_atual": st.column_config.NumberColumn("Atual", format="%.0f"),
-                "alocacao_otima": st.column_config.NumberColumn("Ótima", format="%.0f"),
-                "delta": st.column_config.NumberColumn("Δ", format="%.0f"),
+                "alocacao_atual": st.column_config.TextColumn("Atual"),
+                "alocacao_otima": st.column_config.TextColumn("Ótima"),
+                "delta": st.column_config.TextColumn("Δ"),
                 "delta_%": st.column_config.NumberColumn("Δ %", format="%.1f%%"),
                 "share_atual_%": st.column_config.NumberColumn("Share atual", format="%.1f%%"),
                 "share_otimo_%": st.column_config.NumberColumn("Share ótimo", format="%.1f%%"),
@@ -140,24 +140,26 @@ with tab_opt:
             with col_g:
                 st.markdown("**➕ Onde colocar mais budget**")
                 st.dataframe(
-                    plan["gains"], width="stretch", hide_index=True,
+                    money_columns(plan["gains"], ["alocacao_atual", "alocacao_otima", "delta"]),
+                    width="stretch", hide_index=True,
                     column_config={
                         "canal_label": "Canal",
-                        "alocacao_atual": st.column_config.NumberColumn("Atual", format="%.0f"),
-                        "alocacao_otima": st.column_config.NumberColumn("Sugerido", format="%.0f"),
-                        "delta": st.column_config.NumberColumn("Adicionar", format="+%.0f"),
+                        "alocacao_atual": st.column_config.TextColumn("Atual"),
+                        "alocacao_otima": st.column_config.TextColumn("Sugerido"),
+                        "delta": st.column_config.TextColumn("Adicionar"),
                         "delta_%": st.column_config.NumberColumn("Δ %", format="%.1f%%"),
                     },
                 )
             with col_c:
                 st.markdown("**➖ Onde economizar**")
                 st.dataframe(
-                    plan["cuts"], width="stretch", hide_index=True,
+                    money_columns(plan["cuts"], ["alocacao_atual", "alocacao_otima", "delta"]),
+                    width="stretch", hide_index=True,
                     column_config={
                         "canal_label": "Canal",
-                        "alocacao_atual": st.column_config.NumberColumn("Atual", format="%.0f"),
-                        "alocacao_otima": st.column_config.NumberColumn("Sugerido", format="%.0f"),
-                        "delta": st.column_config.NumberColumn("Economizar", format="%.0f"),
+                        "alocacao_atual": st.column_config.TextColumn("Atual"),
+                        "alocacao_otima": st.column_config.TextColumn("Sugerido"),
+                        "delta": st.column_config.TextColumn("Economizar"),
                         "delta_%": st.column_config.NumberColumn("Δ %", format="%.1f%%"),
                     },
                 )

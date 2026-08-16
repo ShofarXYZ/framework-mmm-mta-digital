@@ -160,8 +160,39 @@ def _css(t: Tokens) -> str:
 }}
 
 /* ---- Tipografia --------------------------------------------------------- */
-html, body, [class*="st-"] {{
+/* ATENÇÃO ao seletor: os ícones do Streamlit são uma FONTE DE LIGADURAS
+   (Material Symbols) e vivem em spans que também carregam classes começando com
+   "st-". Um seletor amplo como [class*="st-"] troca a fonte deles, a ligadura
+   deixa de resolver e o nome do ícone vaza como texto na tela
+   ("keyboard_double_arrow_left", "_arrow_right"). Por isso a fonte do app é
+   aplicada a contêineres de conteúdo, e a exceção dos ícones vem logo abaixo. */
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"],
+.stMarkdown, .stButton, .stDownloadButton, .stSelectbox, .stMultiSelect,
+.stTextInput, .stTextArea, .stNumberInput, .stSlider, .stRadio, .stCheckbox,
+.stMetric, .stDataFrame, .stTabs, .stExpander, .stAlert, .stCaption {{
     font-family: "Segoe UI", "Inter", Helvetica, Arial, sans-serif;
+}}
+
+/* Exceção obrigatória: preserva a fonte de ícones do Streamlit. */
+[data-testid="stIconMaterial"],
+span.material-symbols-rounded,
+span.material-symbols-outlined,
+span.material-symbols-sharp,
+[class*="material-symbols"],
+[class*="MaterialIcon"],
+.material-icons, .material-icons-outlined, .material-icons-round {{
+    font-family: "Material Symbols Rounded", "Material Symbols Outlined",
+                 "Material Symbols Sharp", "Material Icons" !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: "liga";
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
 }}
 h1 {{
     color: {t.text};
@@ -201,25 +232,49 @@ code {{ color: {GOLD}; padding: 1px 6px; border-radius: 4px; font-size: 0.86em; 
 section[data-testid="stSidebar"] h2,
 section[data-testid="stSidebar"] h3 {{ font-size: 1.02rem; margin-top: 1.1rem; }}
 
-/* ---- Métricas: alturas iguais, sem corte de texto ----------------------- */
+/* ---- Métricas: linha de KPIs sempre alinhada ---------------------------- */
+/* O desalinhamento clássico vem de três fontes: rótulos que quebram em 1 ou 2
+   linhas, cards que têm delta e cards que não têm, e colunas que não esticam.
+   A solução: coluna vira flex, o card ocupa a altura toda, o rótulo reserva
+   duas linhas (então todos os VALORES nascem na mesma altura) e o delta é
+   empurrado para a base. */
+div[data-testid="stColumn"] > div,
+div[data-testid="column"] > div {{ height: 100%; }}
 div[data-testid="stMetric"] {{
     background: {t.surface};
     border: 1px solid {t.border};
     border-left: 3px solid {GOLD};
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 14px 16px 12px 16px;
     height: 100%;
+    min-height: 112px;
+    display: flex;
+    flex-direction: column;
     overflow-wrap: anywhere;
 }}
 div[data-testid="stMetricLabel"] {{
     color: {t.text_muted} !important;
     font-size: 0.78rem;
-    line-height: 1.35;
+    line-height: 1.32;
     white-space: normal;      /* rótulo longo quebra em vez de sobrepor */
+    min-height: 2.05em;       /* reserva 2 linhas: alinha os valores entre cards */
+    display: flex;
+    align-items: flex-start;
 }}
 div[data-testid="stMetricLabel"] p {{ color: {t.text_muted} !important; font-size: 0.78rem; }}
-div[data-testid="stMetricValue"] {{ color: {t.text}; font-size: 1.42rem; line-height: 1.3; }}
-div[data-testid="stMetricDelta"] {{ font-size: 0.78rem; line-height: 1.3; }}
+div[data-testid="stMetricValue"] {{
+    color: {t.text};
+    font-size: 1.38rem;
+    line-height: 1.28;
+    margin-top: 6px;
+}}
+div[data-testid="stMetricDelta"] {{
+    font-size: 0.76rem;
+    line-height: 1.25;
+    margin-top: auto;         /* encosta na base: cards com e sem delta ficam iguais */
+    padding-top: 8px;
+}}
+div[data-testid="stMetricDelta"] svg {{ transform: scale(0.85); }}
 
 /* ---- Badge de camada ---------------------------------------------------- */
 .mmm-badge {{
@@ -315,12 +370,13 @@ def page_header(title: str, context: str, layer: str = "MMM") -> None:
         unsafe_allow_html=True,
     )
     st.title(title)
-    st.markdown(f'<p class="mmm-context">{context}</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="mmm-context">{md_inline(context)}</p>', unsafe_allow_html=True)
     st.markdown('<hr class="mmm-hr">', unsafe_allow_html=True)
 
 
 def nav_card(title: str, description: str, accent: str = TEAL) -> None:
     """Card usado na Home para explicar o 'quando usar' de cada página."""
+    title, description = md_inline(title), md_inline(description)
     st.markdown(
         f'<div class="mmm-card" style="border-top-color:{accent}">'
         f"<h4>{title}</h4><p>{description}</p></div>",
@@ -330,6 +386,7 @@ def nav_card(title: str, description: str, accent: str = TEAL) -> None:
 
 def highlight(value: str, label: str, color: str = GOLD) -> None:
     """Bloco de destaque grande (lift esperado, veredito A/B, score de propensão)."""
+    value, label = md_inline(value), md_inline(label)
     st.markdown(
         f'<div class="mmm-highlight" style="background:{tint(color)};border-left:5px solid {color}">'
         f'<span class="value" style="color:{color}">{value}</span>'
@@ -338,10 +395,27 @@ def highlight(value: str, label: str, color: str = GOLD) -> None:
     )
 
 
+def md_inline(text: str) -> str:
+    """Converte markdown inline (**negrito**, *itálico*, `código`) para HTML.
+
+    Os componentes deste módulo montam HTML cru, onde o markdown do Streamlit não
+    é interpretado — sem esta conversão, `**investir em TV**` aparece na tela com
+    os asteriscos à mostra.
+    """
+    import re
+
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text, flags=re.DOTALL)
+    text = re.sub(r"(?<![\*\w])\*(?!\s)(.+?)(?<!\s)\*(?![\*\w])", r"<i>\1</i>", text, flags=re.DOTALL)
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    return text
+
+
 def recommendation_panel(headline: str, detail: str, invest: str, watch: str,
                          invest_note: str = "", watch_note: str = "") -> None:
     """Painel 'onde investir / onde ter atenção', usado nas páginas de MMM e MTA."""
     t = tokens()
+    headline, detail = md_inline(headline), md_inline(detail)
+    invest_note, watch_note = md_inline(invest_note), md_inline(watch_note)
     st.markdown(
         f"""
 <div class="mmm-highlight" style="background:{tint(GOLD, 0.10)};border-left:5px solid {GOLD};
@@ -374,6 +448,7 @@ def recommendation_panel(headline: str, detail: str, invest: str, watch: str,
 def stage_header(number: int, name: str, question: str, intro: str, color: str = TEAL) -> None:
     """Cabeçalho das etapas das páginas guiadas (Descritivo → Prescritivo)."""
     t = tokens()
+    question, intro = md_inline(question), md_inline(intro)
     st.markdown(
         f"""
 <div style="display:flex;gap:16px;align-items:flex-start;margin:4px 0 18px 0">
@@ -398,6 +473,7 @@ def stage_header(number: int, name: str, question: str, intro: str, color: str =
 def plain_box(title: str, text: str, icon: str = "💡", color: str = GOLD) -> None:
     """Caixa de tradução: o mesmo achado dito em linguagem do dia a dia."""
     t = tokens()
+    title, text = md_inline(title), md_inline(text)
     st.markdown(
         f"""
 <div style="background:{tint(color, 0.10)};border-left:4px solid {color};border-radius:8px;

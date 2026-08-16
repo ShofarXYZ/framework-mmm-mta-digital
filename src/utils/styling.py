@@ -225,8 +225,15 @@ code {{ color: {GOLD}; padding: 1px 6px; border-radius: 4px; font-size: 0.86em; 
 
 /* ---- Layout: respiro para nada encostar em nada ------------------------- */
 .block-container {{ padding-top: 2.6rem; padding-bottom: 4rem; max-width: 1500px; }}
-[data-testid="stVerticalBlock"] {{ gap: 0.85rem; }}
-[data-testid="stHorizontalBlock"] {{ gap: 1.1rem; align-items: stretch; }}
+[data-testid="stVerticalBlock"] {{ gap: 1rem; }}
+/* Linhas de colunas (cards, KPIs) precisam de margem PRÓPRIA: como os cards têm
+   height:100% para ficarem alinhados entre si, eles encostam na linha seguinte
+   se o espaçamento depender só do gap do bloco pai. */
+[data-testid="stHorizontalBlock"] {{
+    gap: 1.1rem;
+    align-items: stretch;
+    margin-bottom: 0.9rem;
+}}
 
 /* ---- Sidebar ------------------------------------------------------------ */
 section[data-testid="stSidebar"] h2,
@@ -241,6 +248,7 @@ section[data-testid="stSidebar"] h3 {{ font-size: 1.02rem; margin-top: 1.1rem; }
 div[data-testid="stColumn"] > div,
 div[data-testid="column"] > div {{ height: 100%; }}
 div[data-testid="stMetric"] {{
+    margin-bottom: 2px;
     background: {t.surface};
     border: 1px solid {t.border};
     border-left: 3px solid {GOLD};
@@ -300,6 +308,7 @@ div[data-testid="stMetricDelta"] svg {{ transform: scale(0.85); }}
 
 /* ---- Cards -------------------------------------------------------------- */
 .mmm-card {{
+    margin-bottom: 2px;
     background: {t.surface};
     border: 1px solid {t.border};
     border-top: 3px solid {TEAL};
@@ -443,6 +452,7 @@ def recommendation_panel(headline: str, detail: str, invest: str, watch: str,
             f"<p>{watch_note}</p></div>",
             unsafe_allow_html=True,
         )
+    spacer(18)
 
 
 def stage_header(number: int, name: str, question: str, intro: str, color: str = TEAL) -> None:
@@ -484,6 +494,11 @@ def plain_box(title: str, text: str, icon: str = "💡", color: str = GOLD) -> N
 """,
         unsafe_allow_html=True,
     )
+
+
+def spacer(height: int = 16) -> None:
+    """Espaço vertical explícito entre blocos que precisam respirar."""
+    st.markdown(f"<div style='height:{height}px'></div>", unsafe_allow_html=True)
 
 
 def theme_hint() -> None:
